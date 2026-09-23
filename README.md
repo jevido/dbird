@@ -18,7 +18,10 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
   lazy-loaded. Double-click a table to open its data. Filter box matches
   connection and table names. Right-click for more actions.
 - **SQL editor tabs**: Monaco (the VS Code editor) with SQL highlighting per dialect and alias-aware
-  autocompletion of tables/columns from the default schema. Tabs are restored
+  autocompletion of tables/columns from the default schema. Per connection you
+  choose how: load everything up front, look names up as you type (for huge
+  schemas), keywords only, or automatic (the default: preload up to 5,000
+  tables, look up beyond that). Tabs are restored
   on restart, can be renamed (double-click), reordered (drag) and closed with
   middle-click.
 - **Execution**: each tab has its own dedicated database session, so `SET`,

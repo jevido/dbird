@@ -10,6 +10,9 @@ import { conf as pgsqlConf, language as pgsqlBase } from 'monaco-editor/language
 import { language as mysqlLang } from 'monaco-editor/languages/definitions/mysql/mysql.js';
 import { language as sqlLang } from 'monaco-editor/languages/definitions/sql/sql.js';
 import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
+import { ConnectionService } from '../../bindings/dbird';
+import type { CompletionSetup } from '../../bindings/dbird/models';
+import { quoteIdent } from './sqlutil';
 
 export { monaco };
 
@@ -85,18 +88,78 @@ monaco.editor.defineTheme('dbird-dark', {
 });
 
 // ---- completion ----
+//
+// Each editor model has a completion source: the tab's connection and the
+// setup the backend chose for it (see ConnectionService.Completion):
+//   preload  every table and column of the default schema is in memory
+//   lookup   table names are fetched by prefix as you type, and columns only
+//            for tables the statement references; both are cached
+//   off      keywords and functions only
 
-type Schema = Record<string, string[]>;
+export interface CompletionSource {
+  connId: string;
+  driver: string;
+  setup: CompletionSetup | undefined;
+}
 
-// Table -> columns per model, set by the editor component.
-const schemas = new Map<string, Schema>();
+const sources = new Map<string, CompletionSource>();
 
-export function setModelSchema(model: monaco.editor.ITextModel, schema: Schema | undefined) {
-  schemas.set(model.uri.toString(), schema ?? {});
+export function setModelSource(model: monaco.editor.ITextModel, src: CompletionSource) {
+  sources.set(model.uri.toString(), src);
 }
 
 export function forgetModel(model: monaco.editor.ITextModel) {
-  schemas.delete(model.uri.toString());
+  sources.delete(model.uri.toString());
+}
+
+// Lookup-mode caches, keyed by connection.
+const columnCache = new Map<string, Promise<string[]>>(); // conn \0 schema \0 table
+const prefixCache = new Map<string, { at: number; names: Promise<string[]> }>(); // conn \0 schema \0 prefix
+const PREFIX_TTL = 30_000;
+const PREFIX_LIMIT = 100; // must match ConnectionService.CompleteTables
+
+// Drops cached lookups for a connection, e.g. after DDL or a refresh.
+export function invalidateCompletionCache(connId: string) {
+  for (const m of [columnCache, prefixCache]) {
+    for (const k of m.keys()) if (k.startsWith(connId + '\0')) m.delete(k);
+  }
+}
+
+function lookupColumns(connId: string, schema: string, table: string): Promise<string[]> {
+  const key = `${connId}\0${schema}\0${table}`;
+  let p = columnCache.get(key);
+  if (!p) {
+    p = ConnectionService.TableColumns(connId, schema, table)
+      .then((c) => c ?? [])
+      .catch(() => {
+        columnCache.delete(key); // unknown table (or a typo): retry later
+        return [];
+      });
+    columnCache.set(key, p);
+  }
+  return p;
+}
+
+async function lookupTables(connId: string, schema: string, prefix: string): Promise<string[]> {
+  const now = Date.now();
+  // A cached shorter prefix that returned fewer than the limit already holds
+  // every match for this longer prefix.
+  for (let n = prefix.length; n >= 0; n--) {
+    const hit = prefixCache.get(`${connId}\0${schema}\0${prefix.slice(0, n)}`);
+    if (hit && now - hit.at < PREFIX_TTL) {
+      const names = await hit.names;
+      if (n === prefix.length) return names;
+      if (names.length < PREFIX_LIMIT) {
+        const p = prefix.toLowerCase();
+        return names.filter((t) => t.toLowerCase().startsWith(p));
+      }
+    }
+  }
+  const names = ConnectionService.CompleteTables(connId, schema, prefix)
+    .then((r) => r ?? [])
+    .catch(() => []);
+  prefixCache.set(`${connId}\0${schema}\0${prefix}`, { at: now, names });
+  return names;
 }
 
 const words: Record<string, { keywords: string[]; functions: string[] }> = {
@@ -105,16 +168,27 @@ const words: Record<string, { keywords: string[]; functions: string[] }> = {
   sql: { keywords: sqlLang.keywords as string[], functions: sqlLang.builtinFunctions as string[] },
 };
 
-// Maps aliases used in the statement ("from users u", "join orders as o") to table names.
-function aliases(text: string, schema: Schema): Map<string, string> {
-  const out = new Map<string, string>();
-  const re = /\b(?:from|join|update|into)\s+(?:[\w"`]+\.)?["`]?(\w+)["`]?(?:\s+(?:as\s+)?(\w+))?/gi;
-  const reserved = /^(where|on|join|left|right|inner|outer|cross|full|group|order|limit|set|values|using|natural|union)$/i;
+interface TableRef {
+  schema?: string;
+  table: string;
+}
+
+// Finds "from/join/update/into [schema.]table [as] [alias]" references and
+// maps both table names and aliases (lower-cased) to them.
+function tableRefs(text: string, driver: string): Map<string, TableRef> {
+  const ident = String.raw`(?:"[^"]+"|\x60[^\x60]+\x60|\[[^\]]+\]|[\w$]+)`;
+  const re = new RegExp(String.raw`\b(?:from|join|update|into)\s+(${ident})(?:\s*\.\s*(${ident}))?(?:\s+(?:as\s+)?(\w+))?`, 'gi');
+  const reserved = /^(where|on|join|left|right|inner|outer|cross|full|group|order|limit|set|values|using|natural|union|select|returning|lateral)$/i;
+  const unquote = (s: string) => {
+    if (/^["`[]/.test(s)) return s.slice(1, -1);
+    return driver === 'postgres' ? s.toLowerCase() : s; // Postgres folds unquoted names
+  };
+  const out = new Map<string, TableRef>();
   for (const m of text.matchAll(re)) {
-    const table = Object.keys(schema).find((t) => t.toLowerCase() === m[1].toLowerCase());
-    if (!table) continue;
-    out.set(table.toLowerCase(), table);
-    if (m[2] && !reserved.test(m[2])) out.set(m[2].toLowerCase(), table);
+    const ref: TableRef = m[2] ? { schema: unquote(m[1]), table: unquote(m[2]) } : { table: unquote(m[1]) };
+    if (reserved.test(ref.table)) continue;
+    out.set(ref.table.toLowerCase(), ref);
+    if (m[3] && !reserved.test(m[3])) out.set(m[3].toLowerCase(), ref);
   }
   return out;
 }
@@ -122,38 +196,69 @@ function aliases(text: string, schema: Schema): Map<string, string> {
 for (const lang of Object.keys(words)) {
   disposables.push(monaco.languages.registerCompletionItemProvider(lang, {
     triggerCharacters: ['.'],
-    provideCompletionItems(model, position) {
-      const schema = schemas.get(model.uri.toString()) ?? {};
+    async provideCompletionItems(model, position) {
+      const src = sources.get(model.uri.toString());
+      const setup = src?.setup;
+      const mode = setup?.mode ?? 'off';
       const word = model.getWordUntilPosition(position);
       const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
       const K = monaco.languages.CompletionItemKind;
       const before = model.getLineContent(position.lineNumber).slice(0, word.startColumn - 1);
+      const quote = (name: string) => (src ? quoteIdent(src.driver, name) : name);
+      const table = (name: string, detail: string, sort = '1') =>
+        ({ label: name, kind: K.Struct, insertText: quote(name), detail, range, sortText: sort + name }) as monaco.languages.CompletionItem;
+      const column = (name: string, detail: string, sort = '2') =>
+        ({ label: name, kind: K.Field, insertText: quote(name), detail, range, sortText: sort + name }) as monaco.languages.CompletionItem;
+      const keywords = () => [
+        ...words[lang].keywords.map((kw) => ({ label: kw, kind: K.Keyword, insertText: kw, range, sortText: '3' + kw })),
+        ...words[lang].functions.map((fn) => ({ label: fn, kind: K.Function, insertText: fn, range, sortText: '4' + fn })),
+      ];
 
-      // "alias." or "table." -> that table's columns only.
-      const dot = /(["`]?)(\w+)\1\.$/.exec(before);
+      if (!src || !setup || mode === 'off') {
+        return /\.$/.test(before) ? { suggestions: [] } : { suggestions: keywords() };
+      }
+      const refs = tableRefs(model.getValue(), src.driver);
+      const dot = /(["`]?)([\w$]+)\1\.$/.exec(before);
+
+      if (mode === 'preload') {
+        const cols = setup.columns ?? {};
+        const find = (name: string) => Object.keys(cols).find((t) => t.toLowerCase() === name.toLowerCase());
+        if (dot) {
+          const ref = refs.get(dot[2].toLowerCase());
+          const t = ref && !ref.schema ? find(ref.table) : undefined;
+          return { suggestions: t ? (cols[t] ?? []).map((c) => column(c, t)) : [] };
+        }
+        const suggestions: monaco.languages.CompletionItem[] = [];
+        for (const [t, cs] of Object.entries(cols)) {
+          suggestions.push(table(t, 'table'));
+          for (const c of cs ?? []) suggestions.push(column(c, t));
+        }
+        return { suggestions: [...suggestions, ...keywords()] };
+      }
+
+      // lookup mode
       if (dot) {
-        const table = aliases(model.getValue(), schema).get(dot[2].toLowerCase());
-        const cols = table ? schema[table] : undefined;
-        if (cols) {
-          return { suggestions: cols.map((c) => ({ label: c, kind: K.Field, insertText: c, detail: table, range })) };
+        const ref = refs.get(dot[2].toLowerCase());
+        if (ref) {
+          const cols = await lookupColumns(src.connId, ref.schema ?? setup.schema, ref.table);
+          return { suggestions: cols.map((c) => column(c, ref.table)) };
         }
-        return { suggestions: [] };
+        // Not a known table or alias: treat it as a schema name.
+        const schema = src.driver === 'postgres' ? dot[2].toLowerCase() : dot[2];
+        const names = await lookupTables(src.connId, schema, word.word);
+        return { suggestions: names.map((t) => table(t, schema)), incomplete: names.length >= PREFIX_LIMIT };
       }
-
-      const suggestions: monaco.languages.CompletionItem[] = [];
-      for (const [table, cols] of Object.entries(schema)) {
-        suggestions.push({ label: table, kind: K.Struct, insertText: table, detail: 'table', range, sortText: '1' + table });
-        for (const c of cols) {
-          suggestions.push({ label: c, kind: K.Field, insertText: c, detail: table, range, sortText: '2' + c });
-        }
-      }
-      for (const kw of words[lang].keywords) {
-        suggestions.push({ label: kw, kind: K.Keyword, insertText: kw, range, sortText: '3' + kw });
-      }
-      for (const fn of words[lang].functions) {
-        suggestions.push({ label: fn, kind: K.Function, insertText: fn, range, sortText: '4' + fn });
-      }
-      return { suggestions };
+      const [names, ...colLists] = await Promise.all([
+        lookupTables(src.connId, setup.schema, word.word),
+        ...[...new Set(refs.values())].map((r) =>
+          lookupColumns(src.connId, r.schema ?? setup.schema, r.table).then((cs) => cs.map((c) => column(c, r.table))),
+        ),
+      ]);
+      return {
+        suggestions: [...(names as string[]).map((t) => table(t, 'table')), ...colLists.flat(), ...keywords()],
+        // Ask again as the prefix grows so the database can narrow the list.
+        incomplete: true,
+      };
     },
   }));
 }

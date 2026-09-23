@@ -38,6 +38,14 @@ Or paste a URL (tick *Use connection URL / DSN*):
 | views | `order_totals`, `analytics.monthly_revenue` (materialized) | `order_totals` | `big_orders` |
 | other | schema `analytics` with a table named `"Page Views"`; function `customer_lifetime_value(id)` | database `analytics` | |
 
+## A huge schema
+
+`wails3 task dev:db:huge` adds a database `huge` with 300,000 relations (about
+a minute). Connect to it with database `huge` to see autocomplete switch to
+lookups: *Automatic* notices the size and queries table names by prefix as you
+type. Setting the connection to *Load all tables and columns on connect* shows
+why that is not the default for big schemas.
+
 ## Things to try
 
 - Double-click `orders` in the tree to open its data, sort by a column, press

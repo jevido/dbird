@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"dbird/internal/store"
@@ -142,5 +143,39 @@ func TestSQLiteOddPath(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("database not created at exact path: %v", err)
+	}
+}
+
+func TestCompletionLookups(t *testing.T) {
+	ctx := context.Background()
+	c := store.Connection{ID: "cmp", Driver: SQLite, Database: filepath.Join(t.TempDir(), "c.db")}
+	m := NewManager()
+	defer m.Close()
+	if err := m.Connect(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.Run(ctx, "t", "cmp", []string{
+		"create table customers (id int)", "create table customer_notes (id int)",
+		"create table orders (id int)", "create table cust_x (id int)",
+	}, 10, false); err != nil {
+		t.Fatal(err)
+	}
+	db, driver, _ := m.DB("cmp")
+	n, err := TableCount(ctx, db, driver, "main")
+	if err != nil || n != 4 {
+		t.Fatalf("count = %d, %v", n, err)
+	}
+	got, err := TablesByPrefix(ctx, db, driver, "main", "cust", 10)
+	if err != nil || strings.Join(got, ",") != "cust_x,customer_notes,customers" {
+		t.Fatalf("prefix = %v, %v", got, err)
+	}
+	// "_" is a LIKE wildcard; it must match literally.
+	got, _ = TablesByPrefix(ctx, db, driver, "main", "cust_", 10)
+	if strings.Join(got, ",") != "cust_x" {
+		t.Fatalf("escaped prefix = %v", got)
+	}
+	got, _ = TablesByPrefix(ctx, db, driver, "main", "", 2)
+	if len(got) != 2 {
+		t.Fatalf("limit = %v", got)
 	}
 }

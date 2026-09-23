@@ -106,7 +106,7 @@
       tabId={tab.id}
       value={tab.sql}
       dialect={conn?.driver ?? 'postgres'}
-      schema={app.completions[tab.connectionId]}
+      completion={{ connId: tab.connectionId, driver: conn?.driver ?? '', setup: app.completions[tab.connectionId] }}
       fontSize={app.fontSize}
       onchange={(v) => {
         tab.sql = v;

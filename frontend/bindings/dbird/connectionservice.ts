@@ -17,6 +17,10 @@ import * as dbx$0 from "./internal/dbx/models.js";
 // @ts-ignore: Unused imports
 import * as store$0 from "./internal/store/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * Columns lists the columns of schema.table.
  */
@@ -25,10 +29,20 @@ export function Columns(id: string, schema: string, table: string): $Cancellable
 }
 
 /**
- * Completions returns table -> column names for schema, for autocompletion.
+ * CompleteTables returns up to 100 table names in schema starting with prefix.
  */
-export function Completions(id: string, schema: string): $CancellablePromise<{ [_ in string]?: string[] | null } | null> {
-    return $Call.ByID(323950800, id, schema);
+export function CompleteTables(id: string, schema: string, prefix: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1333347211, id, schema, prefix);
+}
+
+/**
+ * Completion prepares autocompletion for connection id according to its
+ * Autocomplete setting. In automatic mode schemas with up to
+ * dbx.PreloadTableLimit tables are loaded up front; larger ones are looked up
+ * as the user types.
+ */
+export function Completion(id: string): $CancellablePromise<$models.CompletionSetup> {
+    return $Call.ByID(3795535235, id);
 }
 
 /**
@@ -93,6 +107,13 @@ export function Save(c: store$0.Connection): $CancellablePromise<store$0.Connect
  */
 export function Schemas(id: string): $CancellablePromise<string[] | null> {
     return $Call.ByID(1017771595, id);
+}
+
+/**
+ * TableColumns returns the column names of schema.table, for autocompletion.
+ */
+export function TableColumns(id: string, schema: string, table: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1134520702, id, schema, table);
 }
 
 /**

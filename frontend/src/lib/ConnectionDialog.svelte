@@ -14,6 +14,13 @@
   // svelte-ignore state_referenced_locally
   let useUrl = $state(!!initial.url);
 
+  const completionHelp: Record<string, string> = {
+    '': 'Up to 5,000 tables in the default schema are loaded up front; bigger schemas switch to lookups.',
+    preload: 'Fastest suggestions, but reads every column of the default schema when you start typing. Too slow for schemas with hundreds of thousands of tables.',
+    lookup: 'Queries table names by prefix and columns only for tables in your statement. Best for huge databases.',
+    off: 'Suggests SQL keywords and functions only.',
+  };
+
   const colors = ['', '#4caf50', '#2196f3', '#ff9800', '#e91e63', '#9c27b0', '#f44336', '#00bcd4'];
   const isNew = $derived(!initial.id);
   const isSqlite = $derived(c.driver === 'sqlite');
@@ -169,6 +176,17 @@
           {/if}
         {/if}
       {/if}
+
+      <label class="full">
+        <span>Autocomplete</span>
+        <select bind:value={c.completion}>
+          <option value="">Automatic — load small schemas, look up large ones as you type</option>
+          <option value="preload">Load all tables and columns on connect</option>
+          <option value="lookup">Look up tables and columns as you type</option>
+          <option value="off">Keywords only (no metadata queries)</option>
+        </select>
+        <small>{completionHelp[c.completion ?? ''] ?? ''}</small>
+      </label>
 
       <div class="full">
         <span class="lbl">Color</span>

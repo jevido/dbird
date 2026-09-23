@@ -32,6 +32,12 @@ export interface Connection {
      */
     "url": string;
     "color": string;
+
+    /**
+     * Completion selects how editor autocompletion gets table and column
+     * names: "" (automatic), "preload", "lookup" or "off".
+     */
+    "completion": string;
 }
 
 /**

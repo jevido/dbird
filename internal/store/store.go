@@ -27,6 +27,9 @@ type Connection struct {
 	// URL, when set, is used verbatim as the DSN and overrides the fields above.
 	URL   string `json:"url"`
 	Color string `json:"color"`
+	// Completion selects how editor autocompletion gets table and column
+	// names: "" (automatic), "preload", "lookup" or "off".
+	Completion string `json:"completion"`
 }
 
 // Tab is an open SQL editor tab.

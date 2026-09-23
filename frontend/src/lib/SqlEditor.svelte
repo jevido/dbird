@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { monaco, languageFor, setModelSchema, forgetModel } from './monaco';
+  import { monaco, languageFor, setModelSource, forgetModel, type CompletionSource } from './monaco';
 
   // One model per tab, so switching tabs keeps undo history; view state keeps
   // cursor and scroll position.
@@ -37,13 +37,13 @@
     tabId: string;
     value: string;
     dialect: string;
-    schema: Record<string, string[]> | undefined;
+    completion: CompletionSource;
     fontSize: number;
     onchange: (value: string) => void;
     onrun: (script: boolean) => void;
   }
 
-  let { tabId, value, dialect, schema, fontSize, onchange, onrun }: Props = $props();
+  let { tabId, value, dialect, completion, fontSize, onchange, onrun }: Props = $props();
 
   let editor: monaco.editor.IStandaloneCodeEditor | undefined;
   let currentTab = '';
@@ -60,7 +60,7 @@
     untrack(() => {
       currentTab = tabId;
       const model = modelFor(tabId, value, dialect);
-      setModelSchema(model, schema);
+      setModelSource(model, completion);
       editor = monaco.editor.create(el, {
         model,
         theme: 'dbird-dark',
@@ -133,12 +133,12 @@
   // Language and completion schema follow the tab's connection.
   $effect(() => {
     const lang = languageFor[dialect] ?? 'sql';
-    const s = schema;
+    const src = completion;
     void tabId;
     const model = editor?.getModel();
     if (!model) return;
     if (model.getLanguageId() !== lang) monaco.editor.setModelLanguage(model, lang);
-    setModelSchema(model, s);
+    setModelSource(model, src);
   });
 
   $effect(() => {

@@ -15,6 +15,7 @@ export {
 };
 
 export type {
+    CompletionSetup,
     OpenedFile,
     UpdateStatus
 } from "./models.js";

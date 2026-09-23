@@ -1,6 +1,8 @@
 import { ConnectionService, FileService, QueryService, WorkspaceService } from '../../bindings/dbird';
 import type { Connection, Tab } from '../../bindings/dbird/internal/store/models';
 import type { Result } from '../../bindings/dbird/internal/dbx/models';
+import type { CompletionSetup } from '../../bindings/dbird/models';
+import { invalidateCompletionCache } from './monaco';
 import { splitStatements, statementAt, unfilteredDelete, type Dialect, type Statement } from './sqlsplit';
 
 export type { Connection, Tab, Result };
@@ -52,6 +54,7 @@ export function emptyConnection(): Connection {
     sslMode: 'prefer',
     url: '',
     color: '',
+    completion: '',
   };
 }
 
@@ -70,8 +73,8 @@ class AppState {
   maxRows = $state(1000);
   fontSize = $state(13);
   toasts = $state<Toast[]>([]);
-  // Table -> columns per connection, for autocompletion.
-  completions = $state.raw<Record<string, Record<string, string[]>>>({});
+  // Autocomplete setup per connection (see ConnectionService.Completion).
+  completions = $state.raw<Record<string, CompletionSetup>>({});
 
   // Pending confirmation dialog, if any.
   confirmation = $state<ConfirmRequest | null>(null);
@@ -145,6 +148,12 @@ class AppState {
   async saveConnection(c: Connection): Promise<Connection> {
     const saved = await ConnectionService.Save(c);
     const wasConnected = this.connected[saved.id];
+    if (this.completions[saved.id]) {
+      const { [saved.id]: _, ...rest } = this.completions;
+      this.completions = rest;
+      this.#completionTried.delete(saved.id);
+      invalidateCompletionCache(saved.id);
+    }
     await this.reloadConnections();
     if (wasConnected) {
       // Saving closes the pool so new settings apply.
@@ -195,10 +204,9 @@ class AppState {
 
   async loadCompletions(id: string) {
     try {
-      const schema = await ConnectionService.DefaultSchema(id);
-      if (!schema) return;
-      const map = await ConnectionService.Completions(id, schema);
-      this.completions = { ...this.completions, [id]: (map ?? {}) as Record<string, string[]> };
+      const setup = await ConnectionService.Completion(id);
+      invalidateCompletionCache(id);
+      this.completions = { ...this.completions, [id]: setup };
     } catch (e) {
       console.warn('completions', e);
     }

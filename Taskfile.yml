@@ -84,6 +84,15 @@ tasks:
           go run ./dev/sqlite dev/data/shop.sqlite dev/sqlite/seed.sql
         fi
 
+  dev:db:huge:
+    summary: Adds a database "huge" with 300,000 relations to the sample PostgreSQL (takes a few minutes)
+    cmds:
+      - '{{.COMPOSE}} -f dev/compose.yaml exec -T postgres psql -q -U dbird -d shop -c "DROP DATABASE IF EXISTS huge" -c "CREATE DATABASE huge"'
+      - '{{.COMPOSE}} -f dev/compose.yaml exec -T postgres psql -q -v ON_ERROR_STOP=1 -U dbird -d huge < dev/postgres/huge.sql'
+    vars:
+      COMPOSE:
+        sh: 'if docker info >/dev/null 2>&1; then echo "docker compose"; else echo "podman compose"; fi'
+
   dev:db:down:
     summary: Stops the sample databases and deletes their data
     cmds:

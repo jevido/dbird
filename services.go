@@ -27,6 +27,11 @@ func validate(c store.Connection) error {
 	default:
 		return fmt.Errorf("unsupported driver %q", c.Driver)
 	}
+	switch c.Completion {
+	case dbx.CompletionAuto, dbx.CompletionPreload, dbx.CompletionLookup, dbx.CompletionOff:
+	default:
+		return fmt.Errorf("unknown autocomplete mode %q", c.Completion)
+	}
 	if c.Port < 0 || c.Port > 65535 {
 		return errors.New("port must be between 0 and 65535")
 	}
@@ -151,8 +156,62 @@ func (s *ConnectionService) Columns(ctx context.Context, id, schema, table strin
 	return dbx.Columns(ctx, db, driver, schema, table)
 }
 
-// Completions returns table -> column names for schema, for autocompletion.
-func (s *ConnectionService) Completions(ctx context.Context, id, schema string) (map[string][]string, error) {
+// CompletionSetup tells the editor how to autocomplete for a connection.
+type CompletionSetup struct {
+	// Mode is "preload", "lookup" or "off" (automatic is resolved here).
+	Mode   string `json:"mode"`
+	Schema string `json:"schema"`
+	// Columns holds table -> column names in preload mode.
+	Columns    map[string][]string `json:"columns"`
+	TableCount int                 `json:"tableCount"`
+}
+
+// Completion prepares autocompletion for connection id according to its
+// Autocomplete setting. In automatic mode schemas with up to
+// dbx.PreloadTableLimit tables are loaded up front; larger ones are looked up
+// as the user types.
+func (s *ConnectionService) Completion(ctx context.Context, id string) (CompletionSetup, error) {
+	c, ok := s.store.Connection(id)
+	if !ok {
+		return CompletionSetup{}, errors.New("unknown connection")
+	}
+	if c.Completion == dbx.CompletionOff {
+		return CompletionSetup{Mode: dbx.CompletionOff}, nil
+	}
+	if err := s.ensure(ctx, id); err != nil {
+		return CompletionSetup{}, err
+	}
+	db, driver, err := s.dbm.DB(id)
+	if err != nil {
+		return CompletionSetup{}, err
+	}
+	schema, err := dbx.DefaultSchema(ctx, db, driver)
+	if err != nil || schema == "" {
+		return CompletionSetup{Mode: dbx.CompletionOff}, err
+	}
+	out := CompletionSetup{Mode: c.Completion, Schema: schema}
+	if out.Mode == dbx.CompletionAuto {
+		n, err := dbx.TableCount(ctx, db, driver, schema)
+		if err != nil {
+			return CompletionSetup{}, err
+		}
+		out.TableCount = n
+		out.Mode = dbx.CompletionLookup
+		if n <= dbx.PreloadTableLimit {
+			out.Mode = dbx.CompletionPreload
+		}
+	}
+	if out.Mode == dbx.CompletionPreload {
+		out.Columns, err = dbx.SchemaColumns(ctx, db, driver, schema)
+		if err != nil {
+			return CompletionSetup{}, err
+		}
+	}
+	return out, nil
+}
+
+// CompleteTables returns up to 100 table names in schema starting with prefix.
+func (s *ConnectionService) CompleteTables(ctx context.Context, id, schema, prefix string) ([]string, error) {
 	if err := s.ensure(ctx, id); err != nil {
 		return nil, err
 	}
@@ -160,7 +219,20 @@ func (s *ConnectionService) Completions(ctx context.Context, id, schema string) 
 	if err != nil {
 		return nil, err
 	}
-	return dbx.SchemaColumns(ctx, db, driver, schema)
+	return dbx.TablesByPrefix(ctx, db, driver, schema, prefix, 100)
+}
+
+// TableColumns returns the column names of schema.table, for autocompletion.
+func (s *ConnectionService) TableColumns(ctx context.Context, id, schema, table string) ([]string, error) {
+	cols, err := s.Columns(ctx, id, schema, table)
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, len(cols))
+	for i, c := range cols {
+		names[i] = c.Name
+	}
+	return names, nil
 }
 
 // PickSQLiteFile shows a file dialog and returns the chosen path ("" if cancelled).
