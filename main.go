@@ -38,6 +38,7 @@ func main() {
 			application.NewService(&WorkspaceService{store: st}),
 			application.NewService(&FileService{}),
 			application.NewService(NewUpdateService()),
+			application.NewService(&ThemeService{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

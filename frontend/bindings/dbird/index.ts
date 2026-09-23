@@ -4,18 +4,21 @@
 import * as ConnectionService from "./connectionservice.js";
 import * as FileService from "./fileservice.js";
 import * as QueryService from "./queryservice.js";
+import * as ThemeService from "./themeservice.js";
 import * as UpdateService from "./updateservice.js";
 import * as WorkspaceService from "./workspaceservice.js";
 export {
     ConnectionService,
     FileService,
     QueryService,
+    ThemeService,
     UpdateService,
     WorkspaceService
 };
 
 export type {
     CompletionSetup,
+    OmarchyTheme,
     OpenedFile,
     TablePage,
     UpdateStatus

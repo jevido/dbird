@@ -1,5 +1,6 @@
 <script lang="ts" module>
   import { monaco, languageFor, setModelSource, forgetModel, type CompletionSource } from './monaco';
+  import { editorTheme } from './theme';
 
   // One model per tab, so switching tabs keeps undo history; view state keeps
   // cursor and scroll position.
@@ -63,7 +64,7 @@
       setModelSource(model, completion);
       editor = monaco.editor.create(el, {
         model,
-        theme: 'dbird-dark',
+        theme: editorTheme,
         automaticLayout: true,
         fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace",
         fontSize,

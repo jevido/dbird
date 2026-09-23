@@ -4,6 +4,9 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as dbx$0 from "./internal/dbx/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as omarchy$0 from "./internal/omarchy/models.js";
 
 /**
  * CompletionSetup tells the editor how to autocomplete for a connection.
@@ -20,6 +23,14 @@ export interface CompletionSetup {
      */
     "columns": { [_ in string]?: string[] | null } | null;
     "tableCount": number;
+}
+
+/**
+ * OmarchyTheme is the desktop theme dbird follows on Omarchy systems.
+ */
+export interface OmarchyTheme {
+    "available": boolean;
+    "theme": omarchy$0.Theme;
 }
 
 /**

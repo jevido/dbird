@@ -6,11 +6,13 @@
   import ConfirmDialog from './lib/ConfirmDialog.svelte';
   import { forgetEditorState } from './lib/SqlEditor.svelte';
   import { app, errorText } from './lib/state.svelte';
+  import { initTheme } from './lib/theme';
 
   let ready = $state(false);
   let initError = $state('');
   let sidebarW = $state(loadWidth());
 
+  initTheme();
   app
     .init()
     .then(() => (ready = true))
