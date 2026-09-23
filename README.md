@@ -38,6 +38,28 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
 
 ## Install
 
+### Quick install (Linux)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jevido/dbird/main/install.sh | sh
+```
+
+This installs the latest release into your home directory (no sudo), where dbird
+can update itself: the binary goes to `~/.local/share/dbird`, linked as
+`~/.local/bin/dbird`, and dbird is added to your app launcher. If GTK 4 or
+WebKitGTK 6.0 is missing, the script prints the command to install them. The
+same command works on macOS, where it installs `~/Applications/dbird.app`.
+
+To uninstall:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jevido/dbird/main/install.sh | sh -s -- --uninstall
+```
+
+Your connections and tabs stay in `~/.config/dbird`.
+
+### Manual download
+
 Download the latest build from [Releases](https://github.com/jevido/dbird/releases/latest).
 
 | Platform | Download | Updates itself |
