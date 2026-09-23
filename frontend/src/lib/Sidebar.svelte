@@ -278,7 +278,7 @@
         tabindex="0"
         style:--conn-color={c.color || 'var(--text-faint)'}
         onclick={() => toggleConn(c)}
-        ondblclick={() => app.newTab(c.id)}
+        ondblclick={async () => (await app.connect(c.id)) && app.newTab(c.id)}
         onkeydown={(e) => e.key === 'Enter' && toggleConn(c)}
         oncontextmenu={(e) => connMenu(e, c)}
       >

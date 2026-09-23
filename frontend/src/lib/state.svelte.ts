@@ -283,8 +283,21 @@ class AppState {
     this.scheduleSave();
   }
 
-  async connect(id: string): Promise<boolean> {
-    if (this.connected[id]) return true;
+  #pending = new Map<string, Promise<boolean>>();
+
+  // Connects id; callers arriving while an attempt is in flight share it, so a
+  // double click connects (and reports a failure) once.
+  connect(id: string): Promise<boolean> {
+    if (this.connected[id]) return Promise.resolve(true);
+    let p = this.#pending.get(id);
+    if (!p) {
+      p = this.#connect(id).finally(() => this.#pending.delete(id));
+      this.#pending.set(id, p);
+    }
+    return p;
+  }
+
+  async #connect(id: string): Promise<boolean> {
     this.connecting[id] = true;
     try {
       await ConnectionService.Connect(id);
