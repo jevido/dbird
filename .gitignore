@@ -8,3 +8,4 @@ build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
 build/linux/appimage/dbird
 build/linux/appimage/dbird.png
 *.syso
+dev/data

@@ -82,6 +82,11 @@ wails3 build    # production binary in bin/dbird
 wails3 package  # AppImage/deb/rpm, .app, NSIS installer depending on OS
 ```
 
+To try it against real databases, `wails3 task dev:db:up` starts sample
+PostgreSQL and MySQL containers and creates a SQLite file, all filled with the
+same small shop. Connection details and things to try are in
+[dev/README.md](dev/README.md).
+
 The release workflow cross-compiles Windows from Linux; you can do the same:
 `wails3 build GOOS=windows`.
 

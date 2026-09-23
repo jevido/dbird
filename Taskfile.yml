@@ -61,3 +61,34 @@ tasks:
     summary: Builds and runs the Docker image
     cmds:
       - task: common:run:docker
+
+  dev:db:up:
+    summary: Starts sample PostgreSQL and MySQL databases and creates a sample SQLite file (see dev/README.md)
+    cmds:
+      - '{{.COMPOSE}} -f dev/compose.yaml up -d --wait'
+      - task: dev:db:sqlite
+      - echo "Sample databases ready — connection details are in dev/README.md"
+    vars:
+      COMPOSE:
+        sh: 'if docker info >/dev/null 2>&1; then echo "docker compose"; else echo "podman compose"; fi'
+
+  dev:db:sqlite:
+    summary: Creates dev/data/shop.sqlite (recreates it if it exists)
+    cmds:
+      - mkdir -p dev/data
+      - rm -f dev/data/shop.sqlite
+      - |
+        if command -v sqlite3 >/dev/null 2>&1; then
+          sqlite3 dev/data/shop.sqlite < dev/sqlite/seed.sql
+        else
+          go run ./dev/sqlite dev/data/shop.sqlite dev/sqlite/seed.sql
+        fi
+
+  dev:db:down:
+    summary: Stops the sample databases and deletes their data
+    cmds:
+      - '{{.COMPOSE}} -f dev/compose.yaml down -v'
+      - rm -f dev/data/shop.sqlite
+    vars:
+      COMPOSE:
+        sh: 'if docker info >/dev/null 2>&1; then echo "docker compose"; else echo "podman compose"; fi'
