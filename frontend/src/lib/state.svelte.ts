@@ -347,9 +347,15 @@ class AppState {
     return this.tabs[this.tabs.length - 1];
   }
 
+  // Tabs closed since the app started, most recent last (for Ctrl+Shift+T).
+  #closed: { tab: Tab; index: number }[] = [];
+
   closeTab(id: string) {
     const idx = this.tabs.findIndex((t) => t.id === id);
     if (idx < 0) return;
+    const closing = $state.snapshot(this.tabs[idx]) as Tab;
+    // Don't remember tabs that were never used.
+    if (closing.sql.trim() || closing.filePath) this.#closed.push({ tab: closing, index: idx });
     QueryService.CloseTab(id).catch(() => {});
     this.tabs.splice(idx, 1);
     delete this.runtime[id];
@@ -360,6 +366,25 @@ class AppState {
       this.activeTabId = next?.id ?? '';
     }
     if (this.tabs.length === 0) this.newTab('');
+    this.scheduleSave();
+  }
+
+  // Reopens the most recently closed tab, where it was.
+  reopenClosedTab() {
+    const entry = this.#closed.pop();
+    if (!entry) return;
+    const tab = entry.tab;
+    if (this.tabs.some((t) => t.id === tab.id)) tab.id = newID();
+    // Another tab may have started following the file in the meantime.
+    if (tab.filePath && this.tabs.some((t) => t.filePath === tab.filePath)) this.#unlink(tab);
+    // Replace the empty tab that appears after closing the last one.
+    if (this.tabs.length === 1 && !this.tabs[0].sql && !this.tabs[0].filePath) {
+      QueryService.CloseTab(this.tabs[0].id).catch(() => {});
+      this.tabs.splice(0, 1);
+    }
+    this.#ensureRt(tab.id);
+    this.tabs.splice(Math.min(entry.index, this.tabs.length), 0, tab);
+    this.activeTabId = tab.id;
     this.scheduleSave();
   }
 

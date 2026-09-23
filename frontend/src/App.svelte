@@ -44,6 +44,13 @@
 
   function onkeydown(e: KeyboardEvent) {
     if (!ready || app.editing || app.confirmation) return;
+    // Alt+1 … Alt+9: go to tab 1 … 9.
+    if (e.altKey && !e.ctrlKey && !e.metaKey && /^Digit[1-9]$/.test(e.code)) {
+      const t = app.tabs[Number(e.code.slice(5)) - 1];
+      e.preventDefault();
+      if (t) app.activate(t.id);
+      return;
+    }
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
     const key = e.key.toLowerCase();
@@ -56,6 +63,9 @@
     } else if (key === '=' || key === '+' || key === '-') {
       e.preventDefault();
       app.zoom(key === '-' ? -1 : 1);
+    } else if (key === 't' && e.shiftKey) {
+      e.preventDefault();
+      app.reopenClosedTab();
     } else if (key === 't' && !e.shiftKey) {
       e.preventDefault();
       app.newTab();
