@@ -1,7 +1,7 @@
 import { ConnectionService, FileService, QueryService, WorkspaceService } from '../../bindings/dbird';
 import type { Connection, Tab } from '../../bindings/dbird/internal/store/models';
 import type { Result } from '../../bindings/dbird/internal/dbx/models';
-import { splitStatements, statementAt, type Dialect, type Statement } from './sqlsplit';
+import { splitStatements, statementAt, unfilteredDelete, type Dialect, type Statement } from './sqlsplit';
 
 export type { Connection, Tab, Result };
 
@@ -10,6 +10,14 @@ export interface TabRuntime {
   activeResult: number;
   error: string;
   lastRunAt: number;
+}
+
+export interface ConfirmRequest {
+  title: string;
+  message: string;
+  details: string[];
+  confirmLabel: string;
+  resolve: (ok: boolean) => void;
 }
 
 export interface Toast {
@@ -64,6 +72,9 @@ class AppState {
   toasts = $state<Toast[]>([]);
   // Table -> columns per connection, for autocompletion.
   completions = $state.raw<Record<string, Record<string, string[]>>>({});
+
+  // Pending confirmation dialog, if any.
+  confirmation = $state<ConfirmRequest | null>(null);
 
   // Connection dialog: null = closed.
   editing = $state<Connection | null>(null);
@@ -346,10 +357,45 @@ class AppState {
     return stmts;
   }
 
+  ask(req: Omit<ConfirmRequest, 'resolve'>): Promise<boolean> {
+    this.confirmation?.resolve(false);
+    return new Promise((resolve) => {
+      this.confirmation = {
+        ...req,
+        resolve: (ok) => {
+          this.confirmation = null;
+          resolve(ok);
+        },
+      };
+    });
+  }
+
+  // Asks before running DELETE statements that have no WHERE clause.
+  async #confirmDangerous(tab: Tab, statements: string[]): Promise<boolean> {
+    const dialect = this.dialect(tab.connectionId);
+    const risky = statements
+      .map((sql) => ({ sql, table: unfilteredDelete(sql, dialect) }))
+      .filter((r): r is { sql: string; table: string } => r.table !== null);
+    if (risky.length === 0) return true;
+    const conn = this.connection(tab.connectionId);
+    const tables = [...new Set(risky.map((r) => r.table))];
+    return this.ask({
+      title: 'Delete all rows?',
+      message:
+        (risky.length === 1
+          ? `This DELETE has no WHERE clause and will remove every row from ${tables[0]}`
+          : `${risky.length} DELETE statements have no WHERE clause and will remove every row from ${tables.join(', ')}`) +
+        (conn ? ` on “${conn.name}”.` : '.'),
+      details: risky.map((r) => r.sql),
+      confirmLabel: tables.length === 1 ? `Delete all rows from ${tables[0]}` : 'Delete all rows',
+    });
+  }
+
   async run(tab: Tab, statements: string[], continueOnError = false) {
     this.#ensureRt(tab.id);
     const rt = this.runtime[tab.id];
     if (rt.running) return;
+    if (!(await this.#confirmDangerous(tab, statements))) return;
     rt.running = true;
     rt.error = '';
     try {

@@ -3,6 +3,7 @@
   import TabBar from './lib/TabBar.svelte';
   import EditorPane from './lib/EditorPane.svelte';
   import ConnectionDialog from './lib/ConnectionDialog.svelte';
+  import ConfirmDialog from './lib/ConfirmDialog.svelte';
   import { forgetEditorState } from './lib/SqlEditor.svelte';
   import { app, errorText } from './lib/state.svelte';
 
@@ -42,7 +43,7 @@
   }
 
   function onkeydown(e: KeyboardEvent) {
-    if (!ready || app.editing) return;
+    if (!ready || app.editing || app.confirmation) return;
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
     const key = e.key.toLowerCase();
@@ -100,6 +101,10 @@
 
 {#if app.editing}
   <ConnectionDialog initial={app.editing} />
+{/if}
+
+{#if app.confirmation}
+  <ConfirmDialog req={app.confirmation} />
 {/if}
 
 <div class="toasts" aria-live="polite">

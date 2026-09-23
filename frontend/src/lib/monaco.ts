@@ -5,9 +5,8 @@ import 'monaco-editor/features/register.all.js';
 import 'monaco-editor/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
 import 'monaco-editor/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
 import 'monaco-editor/languages/definitions/sql/register.js';
-import 'monaco-editor/languages/definitions/pgsql/register.js';
 import 'monaco-editor/languages/definitions/mysql/register.js';
-import { language as pgsqlLang } from 'monaco-editor/languages/definitions/pgsql/pgsql.js';
+import { conf as pgsqlConf, language as pgsqlBase } from 'monaco-editor/languages/definitions/pgsql/pgsql.js';
 import { language as mysqlLang } from 'monaco-editor/languages/definitions/mysql/mysql.js';
 import { language as sqlLang } from 'monaco-editor/languages/definitions/sql/sql.js';
 import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
@@ -18,8 +17,28 @@ self.MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
 
+// Monaco's PostgreSQL grammar only knows reserved words, so everyday keywords
+// such as UPDATE, DELETE, ALTER and COMMIT render as plain identifiers. dbird
+// registers an extended copy under its own id.
+const extraPgKeywords = (
+  'INSERT UPDATE DELETE MERGE VALUES SET BY RECURSIVE ALTER DROP VIEW INDEX SCHEMA FUNCTION PROCEDURE TRIGGER ' +
+  'SEQUENCE TYPE EXTENSION BEGIN COMMIT ROLLBACK SAVEPOINT RELEASE TRANSACTION TRUNCATE EXPLAIN VACUUM REVOKE ' +
+  'CONFLICT NOTHING KEY CASCADE RESTRICT OVER PARTITION RETURNS LANGUAGE REPLACE IF EXISTS TEMPORARY TEMP ' +
+  'MATERIALIZED REFRESH ADD COLUMN RENAME OWNER COMMENT COPY LOCK CLUSTER REINDEX SHOW RESET DECLARE CURSOR ' +
+  'FETCH MOVE CLOSE LISTEN NOTIFY PREPARE EXECUTE DEALLOCATE CALL NULLS FIRST LAST FILTER WITHIN ORDINALITY'
+).split(' ');
+const pgsqlLang = {
+  ...pgsqlBase,
+  keywords: [...new Set([...(pgsqlBase.keywords as string[]), ...extraPgKeywords])].filter(
+    (k) => !(pgsqlBase.operators as string[]).includes(k),
+  ),
+};
+monaco.languages.register({ id: 'dbird-pgsql', aliases: ['PostgreSQL'] });
+monaco.languages.setLanguageConfiguration('dbird-pgsql', pgsqlConf as monaco.languages.LanguageConfiguration);
+monaco.languages.setMonarchTokensProvider('dbird-pgsql', pgsqlLang as unknown as monaco.languages.IMonarchLanguage);
+
 // Monaco language id per dbird driver.
-export const languageFor: Record<string, string> = { postgres: 'pgsql', mysql: 'mysql', sqlite: 'sql' };
+export const languageFor: Record<string, string> = { postgres: 'dbird-pgsql', mysql: 'mysql', sqlite: 'sql' };
 
 monaco.editor.defineTheme('dbird-dark', {
   base: 'vs-dark',
@@ -72,7 +91,7 @@ export function forgetModel(model: monaco.editor.ITextModel) {
 }
 
 const words: Record<string, { keywords: string[]; functions: string[] }> = {
-  pgsql: { keywords: pgsqlLang.keywords as string[], functions: pgsqlLang.builtinFunctions as string[] },
+  'dbird-pgsql': { keywords: pgsqlLang.keywords, functions: pgsqlBase.builtinFunctions as string[] },
   mysql: { keywords: mysqlLang.keywords as string[], functions: mysqlLang.builtinFunctions as string[] },
   sql: { keywords: sqlLang.keywords as string[], functions: sqlLang.builtinFunctions as string[] },
 };

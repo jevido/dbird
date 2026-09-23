@@ -23,7 +23,8 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
   middle-click.
 - **Execution**: each tab has its own dedicated database session, so `SET`,
   `USE`, `BEGIN`/`COMMIT` and temp tables behave like in a terminal client.
-  Queries can be cancelled.
+  Queries can be cancelled. A `DELETE` without a `WHERE` clause asks for
+  confirmation before it runs.
 - **Results**: virtualized grid (fast with 50k rows), sortable columns,
   resizable columns, keyboard navigation, value viewer with JSON formatting,
   copy as TSV, export to CSV. Scripts produce one result tab per statement.
@@ -94,6 +95,7 @@ Tests:
 
 ```sh
 go test ./internal/...                        # unit tests (SQLite)
+(cd frontend && npm test)                     # statement splitter and DELETE guard
 go test -tags integration ./internal/dbx/     # downloads and runs a real PostgreSQL
 ```
 

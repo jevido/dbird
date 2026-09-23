@@ -47,6 +47,10 @@ jobs:
       - name: Updater tests
         run: go test -run TestMatchAsset .
 
+      - name: Frontend unit tests
+        working-directory: frontend
+        run: npm test
+
       - name: Svelte check
         working-directory: frontend
         run: npx svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
