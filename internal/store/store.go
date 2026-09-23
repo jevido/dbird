@@ -53,6 +53,8 @@ type Workspace struct {
 type data struct {
 	Connections []Connection `json:"connections"`
 	Workspace   Workspace    `json:"workspace"`
+	// LastVersion is the dbird version that last ran, for the "what's new" dialog.
+	LastVersion string `json:"lastVersion,omitempty"`
 }
 
 // Store is a JSON-file-backed store. It is safe for concurrent use.
@@ -187,5 +189,23 @@ func (s *Store) SaveWorkspace(w Workspace) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.d.Workspace = w
+	return s.save()
+}
+
+// LastVersion returns the dbird version recorded by SetLastVersion.
+func (s *Store) LastVersion() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.d.LastVersion
+}
+
+// SetLastVersion records the dbird version that ran.
+func (s *Store) SetLastVersion(v string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.d.LastVersion == v {
+		return nil
+	}
+	s.d.LastVersion = v
 	return s.save()
 }

@@ -7,15 +7,25 @@
   import { forgetEditorState } from './lib/SqlEditor.svelte';
   import { app, errorText } from './lib/state.svelte';
   import { initTheme } from './lib/theme';
+  import WhatsNew from './lib/WhatsNew.svelte';
+  import { ChangelogService } from '../bindings/dbird';
+  import type { Entry } from '../bindings/dbird/internal/changelog/models';
 
   let ready = $state(false);
   let initError = $state('');
   let sidebarW = $state(loadWidth());
 
   initTheme();
+  let whatsNew = $state<Entry[]>([]);
+
   app
     .init()
-    .then(() => (ready = true))
+    .then(() => {
+      ready = true;
+      ChangelogService.WhatsNew()
+        .then((e) => (whatsNew = e ?? []))
+        .catch(() => {});
+    })
     .catch((e) => (initError = errorText(e)));
 
   function loadWidth(): number {
@@ -45,7 +55,7 @@
   }
 
   function onkeydown(e: KeyboardEvent) {
-    if (!ready || app.editing || app.confirmation) return;
+    if (!ready || app.editing || app.confirmation || whatsNew.length) return;
     // Alt+1 … Alt+9: go to tab 1 … 9.
     if (e.altKey && !e.ctrlKey && !e.metaKey && /^Digit[1-9]$/.test(e.code)) {
       const t = app.tabs[Number(e.code.slice(5)) - 1];
@@ -113,6 +123,10 @@
 
 {#if app.editing}
   <ConnectionDialog initial={app.editing} />
+{/if}
+
+{#if whatsNew.length > 0}
+  <WhatsNew entries={whatsNew} onclose={() => (whatsNew = [])} />
 {/if}
 
 {#if app.confirmation}

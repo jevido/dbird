@@ -1,0 +1,3 @@
+# Commit subjects to leave out of the in-app changelog and release notes
+# (developer-only changes that happen to touch app code). One per line.
+Make the editor survive hot reloads in dev

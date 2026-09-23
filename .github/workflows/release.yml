@@ -35,6 +35,8 @@ jobs:
       UPDATE_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history and tags, for the changelog
 
       - uses: actions/setup-go@v6
         with:
@@ -64,6 +66,11 @@ jobs:
       - name: Stamp version
         run: scripts/set-version.sh "$VERSION"
 
+      - name: Embed changelog
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then go run ./scripts/changelog; else go run ./scripts/changelog -next "v$VERSION"; fi > internal/changelog/changelog.json
+
       - name: Build Linux packages
         if: matrix.target == 'linux'
         env:
@@ -75,11 +82,12 @@ jobs:
           mkdir -p dist
           # Portable archive: the one the in-app updater downloads.
           tar -C bin -czf "dist/dbird-linux-${{ matrix.arch }}.tar.gz" dbird
+          # Version-less names, so .../releases/latest/download/<name> links keep working.
           rpmarch=$([ "${{ matrix.arch }}" = amd64 ] && echo x86_64 || echo aarch64)
-          mv bin/dbird.deb "dist/dbird_${VERSION}_${{ matrix.arch }}.deb"
-          mv bin/dbird.rpm "dist/dbird-${VERSION}.${rpmarch}.rpm"
-          mv bin/dbird.pkg.tar.zst "dist/dbird-${VERSION}-${rpmarch}.pkg.tar.zst"
-          mv bin/dbird-*.AppImage "dist/dbird-${VERSION}-${rpmarch}.AppImage"
+          mv bin/dbird.deb "dist/dbird-linux-${{ matrix.arch }}.deb"
+          mv bin/dbird.rpm "dist/dbird-linux-${rpmarch}.rpm"
+          mv bin/dbird.pkg.tar.zst "dist/dbird-linux-${rpmarch}.pkg.tar.zst"
+          mv bin/dbird-*.AppImage "dist/dbird-linux-${rpmarch}.AppImage"
 
       - name: Build macOS app (universal)
         if: matrix.target == 'darwin'
@@ -106,6 +114,14 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -115,10 +131,13 @@ jobs:
         working-directory: dist
         run: sha256sum * > checksums.txt && cat checksums.txt
 
+      - name: Release notes
+        run: go run ./scripts/changelog -notes "$GITHUB_REF_NAME" > notes.md && cat notes.md
+
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          flags=(--generate-notes --title "dbird ${GITHUB_REF_NAME#v}")
+          flags=(--notes-file notes.md --title "dbird ${GITHUB_REF_NAME#v}")
           case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" "${flags[@]}"
