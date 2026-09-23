@@ -65,7 +65,7 @@
       ondragend={() => (dragFrom = dragOver = -1)}
     >
       {#if running}
-        <span class="spin"></span>
+        <span class="spin" title="Running"></span>
       {:else}
         <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h5l3 3v9H4z M9 2v3h3" stroke="currentColor" stroke-width="1.2" fill="none" /></svg>
       {/if}

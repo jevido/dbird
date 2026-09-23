@@ -8,6 +8,24 @@
 
   const current = $derived(results[rt.activeResult]);
 
+  // Ticks while a query runs, for the elapsed-time display.
+  let now = $state(Date.now());
+  $effect(() => {
+    if (!rt.running) return;
+    now = Date.now();
+    const t = setInterval(() => (now = Date.now()), 100);
+    return () => clearInterval(t);
+  });
+
+  function elapsed(ms: number): string {
+    const sec = Math.max(0, ms) / 1000;
+    if (sec < 60) return `${sec.toFixed(1)} s`;
+    const m = Math.floor(sec / 60);
+    const h = Math.floor(m / 60);
+    const ss = String(Math.floor(sec % 60)).padStart(2, '0');
+    return h > 0 ? `${h}:${String(m % 60).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+  }
+
   function label(i: number): string {
     const r = results[i];
     if (r.error) return `Error ${i + 1}`;
@@ -35,7 +53,7 @@
 
 <section class="results">
   {#if rt.running}
-    <div class="state"><span class="spinner"></span> Executing…</div>
+    <div class="state"><span class="spinner"></span> Executing… <span class="elapsed">{elapsed(now - rt.startedAt)}</span></div>
   {:else if rt.error}
     <div class="state error"><pre>{rt.error}</pre></div>
   {:else if results.length === 0}
@@ -114,6 +132,9 @@
   .state:has(.spinner) {
     flex-direction: row;
     align-items: center;
+    align-content: flex-start;
+    flex-wrap: wrap;
+    height: auto;
     color: var(--text-muted);
   }
   pre {
@@ -129,6 +150,11 @@
     padding-left: 10px;
     max-height: 220px;
     overflow: auto;
+  }
+  .elapsed {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
   }
   .ok {
     color: var(--success);

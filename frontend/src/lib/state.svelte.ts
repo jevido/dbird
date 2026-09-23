@@ -10,6 +10,7 @@ export type { Connection, Tab, Result };
 
 export interface TabRuntime {
   running: boolean;
+  startedAt: number; // Date.now() when the current run started
 
   activeResult: number;
   error: string;
@@ -56,7 +57,7 @@ function dialectHint(sql: string, dialect: Dialect): string {
   return '';
 }
 
-const idleRuntime: TabRuntime = { running: false, activeResult: 0, error: '', lastRunAt: 0 };
+const idleRuntime: TabRuntime = { running: false, startedAt: 0, activeResult: 0, error: '', lastRunAt: 0 };
 
 function newID(): string {
   return Math.random().toString(16).slice(2, 10) + Date.now().toString(16).slice(-6);
@@ -457,7 +458,7 @@ class AppState {
 
   #ensureRt(tabId: string) {
     if (!this.runtime[tabId]) {
-      this.runtime[tabId] = { running: false, activeResult: 0, error: '', lastRunAt: 0 };
+      this.runtime[tabId] = { running: false, startedAt: 0, activeResult: 0, error: '', lastRunAt: 0 };
     }
   }
 
@@ -538,6 +539,7 @@ class AppState {
     if (rt.running) return;
     if (!(await this.#confirmDangerous(tab, statements))) return;
     rt.running = true;
+    rt.startedAt = Date.now();
     rt.error = '';
     try {
       if (!(await this.connect(tab.connectionId))) {

@@ -117,6 +117,9 @@
   .layout {
     display: grid;
     grid-template-columns: var(--sidebar-w) 0 1fr;
+    /* Keep the row at the window height so the sidebar tree scrolls
+       instead of growing past the bottom. */
+    grid-template-rows: minmax(0, 1fr);
     height: 100%;
   }
   .vsplit {
