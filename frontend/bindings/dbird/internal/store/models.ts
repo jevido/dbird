@@ -53,6 +53,11 @@ export interface Tab {
      * FilePath is set when the tab is backed by a .sql file on disk.
      */
     "filePath": string;
+
+    /**
+     * Dirty is set when a file-backed tab has edits not saved to FilePath.
+     */
+    "dirty": boolean;
 }
 
 /**

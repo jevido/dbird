@@ -85,6 +85,11 @@
     <button class="icon-btn" title="Open script (Ctrl+O)" aria-label="Open script" onclick={() => app.openScript()}>
       <svg viewBox="0 0 16 16"><path d="M2 4.5V13h11l1.5-6H4.5L3 13M2 4.5V3h4l1.5 1.5H12V7" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round" /></svg>
     </button>
+    {#if tab.filePath}
+      <button class="icon-btn" title="Open {tab.filePath} in your default editor. Saves there show up here." aria-label="Open in external editor" onclick={() => app.openExternally(tab)}>
+        <svg viewBox="0 0 16 16"><path d="M9 2.5h4.5V7M13.5 2.5 7.5 8.5M11.5 9.5v4h-9v-9h4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </button>
+    {/if}
     <button class="icon-btn" title={tab.filePath ? `Save ${tab.filePath} (Ctrl+S)` : 'Save script (Ctrl+S)'} aria-label="Save script" onclick={() => app.saveScript(tab)}>
       <svg viewBox="0 0 16 16"><path d="M3 2.5h8l2.5 2.5v8.5h-11zM5 2.5v3.5h5V2.5M5 13.5V9.5h6v4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round" /></svg>
     </button>
@@ -109,8 +114,7 @@
       completion={{ connId: tab.connectionId, driver: conn?.driver ?? '', setup: app.completions[tab.connectionId] }}
       fontSize={app.fontSize}
       onchange={(v) => {
-        tab.sql = v;
-        app.scheduleSave();
+        app.edited(tab, v);
         app.ensureCompletions(tab.connectionId);
       }}
       onrun={run}

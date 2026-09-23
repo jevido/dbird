@@ -31,7 +31,10 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
 - **Results**: virtualized grid (fast with 50k rows), sortable columns,
   resizable columns, keyboard navigation, value viewer with JSON formatting,
   copy as TSV, export to CSV. Scripts produce one result tab per statement.
-- **Files**: open and save `.sql` scripts.
+- **Files**: open and save `.sql` scripts. Open scripts are watched: save the
+  file in another editor (the toolbar button opens it in your default one) and
+  dbird shows the new content. If the tab has unsaved edits (marked •), dbird
+  asks before replacing them.
 
 ## Install
 

@@ -43,7 +43,7 @@
       aria-selected={t.id === app.activeTabId}
       style:--conn-color={conn?.color || undefined}
       draggable="true"
-      title={conn ? `${t.title} — ${conn.name}` : t.title}
+      title={[t.filePath || t.title, conn?.name].filter(Boolean).join(' — ')}
       onclick={() => app.activate(t.id)}
       onauxclick={(e) => e.button === 1 && close(t.id)}
       ondblclick={() => startRename(t.id, t.title)}
@@ -84,6 +84,7 @@
         />
       {:else}
         <span class="title">{t.title}</span>
+        {#if t.filePath && t.dirty}<span class="dirty" title="Unsaved changes">•</span>{/if}
       {/if}
       <button
         class="close"
@@ -154,6 +155,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .dirty {
+    color: var(--text-muted);
+    font-size: 16px;
+    line-height: 1;
+    margin-left: -3px;
   }
   .rename {
     flex: 1;

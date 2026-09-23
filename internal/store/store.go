@@ -40,6 +40,8 @@ type Tab struct {
 	SQL          string `json:"sql"`
 	// FilePath is set when the tab is backed by a .sql file on disk.
 	FilePath string `json:"filePath"`
+	// Dirty is set when a file-backed tab has edits not saved to FilePath.
+	Dirty bool `json:"dirty"`
 }
 
 // Workspace is the persisted UI state.

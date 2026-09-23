@@ -20,9 +20,9 @@
 />
 
 <div class="backdrop" role="presentation" onmousedown={(e) => e.target === e.currentTarget && req.resolve(false)}>
-  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+  <div class={['dialog', req.tone === 'normal' && 'normal']} role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
     <header>
-      <span class="icon" aria-hidden="true">!</span>
+      <span class="icon" aria-hidden="true">{req.tone === 'normal' ? 'i' : '!'}</span>
       <h2 id="confirm-title">{req.title}</h2>
     </header>
     <p id="confirm-msg">{req.message}</p>
@@ -32,8 +32,8 @@
       {/each}
     </div>
     <footer>
-      <button class="btn" onclick={() => req.resolve(false)} {@attach focusCancel}>Cancel</button>
-      <button class="btn danger-solid" onclick={() => req.resolve(true)}>{req.confirmLabel}</button>
+      <button class="btn" onclick={() => req.resolve(false)} {@attach focusCancel}>{req.cancelLabel ?? 'Cancel'}</button>
+      <button class={['btn', req.tone === 'normal' ? 'primary' : 'danger-solid']} onclick={() => req.resolve(true)}>{req.confirmLabel}</button>
     </footer>
   </div>
 </div>
@@ -56,6 +56,14 @@
     border-radius: 10px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     padding: 16px 18px 14px;
+  }
+  .dialog.normal {
+    border-top-color: var(--accent);
+  }
+  .dialog.normal .icon {
+    background: var(--accent);
+    font-style: italic;
+    font-family: Georgia, serif;
   }
   header {
     display: flex;

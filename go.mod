@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/fergusstrange/embedded-postgres v1.34.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/wailsapp/wails/v3 v3.0.0-beta.18

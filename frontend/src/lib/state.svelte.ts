@@ -1,3 +1,4 @@
+import { Events } from '@wailsio/runtime';
 import { ConnectionService, FileService, QueryService, WorkspaceService } from '../../bindings/dbird';
 import type { Connection, Tab } from '../../bindings/dbird/internal/store/models';
 import type { Result } from '../../bindings/dbird/internal/dbx/models';
@@ -19,6 +20,9 @@ export interface ConfirmRequest {
   message: string;
   details: string[];
   confirmLabel: string;
+  cancelLabel?: string;
+  // 'danger' (default) for destructive actions, 'normal' otherwise.
+  tone?: 'danger' | 'normal';
   resolve: (ok: boolean) => void;
 }
 
@@ -34,6 +38,8 @@ export function errorText(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
   return String(e);
 }
+
+let offFileChanged: (() => void) | undefined;
 
 const idleRuntime: TabRuntime = { running: false, activeResult: 0, error: '', lastRunAt: 0 };
 
@@ -106,8 +112,97 @@ class AppState {
     const known = new Set(this.connections.map((c) => c.id));
     this.tabs = (ws.tabs ?? []).map((t) => ({ ...t, connectionId: known.has(t.connectionId) ? t.connectionId : '' }));
     for (const t of this.tabs) this.#ensureRt(t.id);
+    // One tab per file (older versions allowed duplicates via Save As). The
+    // tab that was active keeps following the file; others become copies.
+    const linked = new Set<string>();
+    const active = this.tabs.find((t) => t.id === ws.activeTabId);
+    if (active?.filePath) linked.add(active.filePath);
+    for (const t of this.tabs) {
+      if (!t.filePath || t === active) continue;
+      if (linked.has(t.filePath)) this.#unlink(t);
+      else linked.add(t.filePath);
+    }
     if (this.tabs.length === 0) this.newTab(this.connections[0]?.id ?? '');
     this.activeTabId = this.tabs.some((t) => t.id === ws.activeTabId) ? ws.activeTabId : this.tabs[0].id;
+    // Replace an earlier subscription (hot reload in dev re-runs init).
+    offFileChanged?.();
+    offFileChanged = Events.On('file:changed', (e: { data: { path: string; content: string } }) =>
+      this.#onFileChanged(e.data.path, e.data.content),
+    );
+    await this.#refreshFileTabs();
+    this.#syncWatches();
+  }
+
+  // ---- files changed outside dbird ----
+
+  #watched = '';
+
+  // Tells the backend which files to watch: the ones open in tabs.
+  #syncWatches() {
+    const paths = [...new Set(this.tabs.map((t) => t.filePath).filter(Boolean))].sort();
+    const key = paths.join('\n');
+    if (key === this.#watched) return;
+    this.#watched = key;
+    FileService.Watch(paths).catch((e) => console.warn('watch', e));
+  }
+
+  // Picks up edits made while dbird was closed.
+  async #refreshFileTabs() {
+    for (const t of this.tabs) {
+      if (!t.filePath || t.dirty) continue;
+      try {
+        const content = await FileService.ReadScript(t.filePath);
+        if (content !== t.sql) {
+          t.sql = content;
+          this.scheduleSave();
+        }
+      } catch {
+        /* file moved or deleted; keep what we have */
+      }
+    }
+  }
+
+  async #onFileChanged(path: string, content: string) {
+    const tabs = this.tabs.filter((x) => x.filePath === path);
+    const stale = tabs.filter((t) => t.sql !== content);
+    if (stale.length === 0) {
+      for (const t of tabs) t.dirty = false;
+      return;
+    }
+    const title = stale[0].title;
+    if (stale.some((t) => t.dirty)) {
+      const reload = await this.ask({
+        title: 'File changed on disk',
+        message: `“${title}” was changed outside dbird, and ${tabs.length > 1 ? 'a tab showing it has' : 'this tab has'} edits that aren't saved to the file.`,
+        details: [path],
+        confirmLabel: 'Reload from disk',
+        cancelLabel: 'Keep my version',
+        tone: 'normal',
+      });
+      if (!reload) return;
+    } else {
+      this.toast(`Reloaded ${title} (changed on disk)`);
+    }
+    for (const t of tabs) {
+      t.sql = content;
+      t.dirty = false;
+    }
+    this.scheduleSave();
+  }
+
+  // Detaches a tab from its file, keeping its content as a normal tab.
+  #unlink(t: Tab) {
+    const base = t.filePath.split(/[\\/]/).pop();
+    t.filePath = '';
+    t.dirty = false;
+    if (t.title === base) t.title = `${base} (copy)`;
+  }
+
+  // Called when the user edits a tab.
+  edited(tab: Tab, sql: string) {
+    tab.sql = sql;
+    if (tab.filePath) tab.dirty = true;
+    this.scheduleSave();
   }
 
   toast(text: string, kind: Toast['kind'] = 'info') {
@@ -133,6 +228,7 @@ class AppState {
 
   saveNow() {
     clearTimeout(this.#saveTimer);
+    this.#syncWatches();
     const tabs = $state.snapshot(this.tabs);
     WorkspaceService.Save({ tabs, activeTabId: this.activeTabId }).catch((e) =>
       console.error('save workspace:', errorText(e)),
@@ -226,6 +322,7 @@ class AppState {
       connectionId,
       sql,
       filePath: '',
+      dirty: false,
     };
     this.#ensureRt(tab.id);
     this.tabs.push(tab);
@@ -267,6 +364,7 @@ class AppState {
       tab.sql = f.content;
       tab.title = f.name;
       tab.filePath = f.path;
+      tab.dirty = false;
       this.scheduleSave();
     } catch (e) {
       this.toast(`Open failed: ${errorText(e)}`, 'error');
@@ -277,18 +375,38 @@ class AppState {
     try {
       if (tab.filePath && !saveAs) {
         await FileService.SaveScript(tab.filePath, tab.sql);
+        tab.dirty = false;
+        this.scheduleSave();
         this.toast(`Saved ${tab.title}`);
         return;
       }
       const name = tab.filePath ? tab.filePath.split(/[\\/]/).pop()! : `${tab.title.replace(/[^\w.-]+/g, '_')}.sql`;
       const path = await FileService.SaveAs(name, tab.sql, 'sql');
       if (!path) return;
+      // One tab per file: another tab showing this file stops following it.
+      for (const other of this.tabs) {
+        if (other !== tab && other.filePath === path) {
+          this.#unlink(other);
+          this.toast(`“${other.title}” no longer follows ${path.split(/[\\/]/).pop()}`);
+        }
+      }
       tab.filePath = path;
       tab.title = path.split(/[\\/]/).pop() ?? tab.title;
+      tab.dirty = false;
       this.scheduleSave();
       this.toast(`Saved ${tab.title}`);
     } catch (e) {
       this.toast(`Save failed: ${errorText(e)}`, 'error');
+    }
+  }
+
+  async openExternally(tab: Tab) {
+    if (!tab.filePath) return;
+    try {
+      if (tab.dirty) await this.saveScript(tab);
+      await FileService.OpenExternally(tab.filePath);
+    } catch (e) {
+      this.toast(`Could not open ${tab.title}: ${errorText(e)}`, 'error');
     }
   }
 
