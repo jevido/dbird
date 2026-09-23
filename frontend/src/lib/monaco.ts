@@ -33,9 +33,18 @@ const pgsqlLang = {
     (k) => !(pgsqlBase.operators as string[]).includes(k),
   ),
 };
-monaco.languages.register({ id: 'dbird-pgsql', aliases: ['PostgreSQL'] });
-monaco.languages.setLanguageConfiguration('dbird-pgsql', pgsqlConf as monaco.languages.LanguageConfiguration);
-monaco.languages.setMonarchTokensProvider('dbird-pgsql', pgsqlLang as unknown as monaco.languages.IMonarchLanguage);
+// Registrations are undone when this module is hot-reloaded in dev, so they
+// don't pile up.
+const disposables: monaco.IDisposable[] = [];
+import.meta.hot?.dispose(() => disposables.forEach((d) => d.dispose()));
+
+if (!monaco.languages.getLanguages().some((l) => l.id === 'dbird-pgsql')) {
+  monaco.languages.register({ id: 'dbird-pgsql', aliases: ['PostgreSQL'] });
+}
+disposables.push(
+  monaco.languages.setLanguageConfiguration('dbird-pgsql', pgsqlConf as monaco.languages.LanguageConfiguration),
+  monaco.languages.setMonarchTokensProvider('dbird-pgsql', pgsqlLang as unknown as monaco.languages.IMonarchLanguage),
+);
 
 // Monaco language id per dbird driver.
 export const languageFor: Record<string, string> = { postgres: 'dbird-pgsql', mysql: 'mysql', sqlite: 'sql' };
@@ -111,7 +120,7 @@ function aliases(text: string, schema: Schema): Map<string, string> {
 }
 
 for (const lang of Object.keys(words)) {
-  monaco.languages.registerCompletionItemProvider(lang, {
+  disposables.push(monaco.languages.registerCompletionItemProvider(lang, {
     triggerCharacters: ['.'],
     provideCompletionItems(model, position) {
       const schema = schemas.get(model.uri.toString()) ?? {};
@@ -146,5 +155,5 @@ for (const lang of Object.keys(words)) {
       }
       return { suggestions };
     },
-  });
+  }));
 }

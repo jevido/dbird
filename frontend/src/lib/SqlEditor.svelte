@@ -19,7 +19,10 @@
   function modelFor(tabId: string, value: string, dialect: string): monaco.editor.ITextModel {
     let m = models.get(tabId);
     if (!m || m.isDisposed()) {
-      m = monaco.editor.createModel(value, languageFor[dialect] ?? 'sql', monaco.Uri.parse(`inmemory://dbird/${tabId}.sql`));
+      const uri = monaco.Uri.parse(`inmemory://dbird/${tabId}.sql`);
+      // The model can outlive this module (e.g. after a hot reload in dev), and
+      // Monaco refuses a second model with the same URI.
+      m = monaco.editor.getModel(uri) ?? monaco.editor.createModel(value, languageFor[dialect] ?? 'sql', uri);
       m.setEOL(monaco.editor.EndOfLineSequence.LF);
       models.set(tabId, m);
     }
