@@ -3,22 +3,40 @@
 //
 // Statements end at a top-level `;` or at a blank line (like DBeaver's
 // "blank line is statement delimiter" default). Quotes, comments and
-// PostgreSQL dollar-quoted bodies are respected.
+// PostgreSQL dollar-quoted bodies are respected, and so are routine bodies:
+//   - MySQL: CREATE PROCEDURE / FUNCTION / TRIGGER / EVENT … BEGIN … END
+//     stays one statement, including the `;`s and blank lines inside.
+//   - MySQL: `DELIMITER //` lines switch the statement delimiter, as in the
+//     mysql command-line client. The DELIMITER lines themselves aren't sent.
+//   - PostgreSQL: CREATE FUNCTION / PROCEDURE … BEGIN ATOMIC … END.
 
 export type Dialect = 'postgres' | 'mysql' | 'sqlite';
 
 export interface Statement {
   text: string;
   from: number; // offset of first character
-  to: number; // offset just past last character (excluding the `;`)
+  to: number; // offset just past last character (excluding the delimiter)
 }
+
+// "CREATE [OR REPLACE] [DEFINER = x] [AGGREGATE|CONSTRAINT] PROCEDURE|FUNCTION|TRIGGER|EVENT"
+const routineHeader =
+  /^CREATE\s+(OR\s+REPLACE\s+)?(DEFINER\s*=\s*\S+\s+)?((AGGREGATE|CONSTRAINT)\s+)?(PROCEDURE|FUNCTION|TRIGGER|EVENT)$/i;
+
+const isWordStart = (c: string | undefined) => !!c && /[A-Za-z_]/.test(c);
+const isWordChar = (c: string | undefined) => !!c && /[A-Za-z0-9_$]/.test(c);
 
 export function splitStatements(src: string, dialect: Dialect = 'postgres'): Statement[] {
   const out: Statement[] = [];
+  const n = src.length;
   let start = 0;
   let hasCode = false;
   let i = 0;
-  const n = src.length;
+  let delimiter = ';';
+
+  // Per-statement state for routine bodies.
+  let words: string[] = []; // first few top-level words of the statement
+  let routine = false; // statement creates a routine that may have a body
+  let depth = 0; // BEGIN/CASE … END nesting inside the body
 
   const push = (end: number) => {
     if (hasCode) {
@@ -29,12 +47,28 @@ export function splitStatements(src: string, dialect: Dialect = 'postgres'): Sta
       out.push({ text: src.slice(a, b), from: a, to: b });
     }
     hasCode = false;
+    words = [];
+    routine = false;
+    depth = 0;
   };
+
+  // The word following position j (skipping whitespace), upper-cased.
+  const nextWord = (j: number) => /^\s*([A-Za-z_]\w*)/.exec(src.slice(j, j + 64))?.[1].toUpperCase() ?? '';
 
   while (i < n) {
     const c = src[i];
     const next = src[i + 1];
 
+    // DELIMITER directive (MySQL), only at the start of a statement.
+    if (dialect === 'mysql' && !hasCode && (c === 'D' || c === 'd')) {
+      const m = /^DELIMITER[ \t]+(\S+)[ \t]*(?=\r?\n|$)/i.exec(src.slice(i, i + 64));
+      if (m && /(^|\n)[ \t]*$/.test(src.slice(Math.max(0, i - 64), i))) {
+        delimiter = m[1];
+        i += m[0].length;
+        start = i;
+        continue;
+      }
+    }
     // Line comments.
     if ((c === '-' && next === '-') || (c === '#' && dialect === 'mysql')) {
       const nl = src.indexOf('\n', i);
@@ -72,7 +106,7 @@ export function splitStatements(src: string, dialect: Dialect = 'postgres'): Sta
     // PostgreSQL dollar quoting: $$...$$ or $tag$...$tag$.
     if (c === '$' && dialect === 'postgres') {
       const m = /^\$([A-Za-z_][A-Za-z0-9_]*)?\$/.exec(src.slice(i, i + 64));
-      if (m && !/[A-Za-z0-9_]/.test(src[i - 1] ?? '')) {
+      if (m && !isWordChar(src[i - 1])) {
         hasCode = true;
         const tag = m[0];
         const end = src.indexOf(tag, i + tag.length);
@@ -80,13 +114,43 @@ export function splitStatements(src: string, dialect: Dialect = 'postgres'): Sta
         continue;
       }
     }
-    if (c === ';') {
+    // Custom delimiter (after DELIMITER): ends statements anywhere at top level.
+    if (delimiter !== ';' && src.startsWith(delimiter, i)) {
+      push(i);
+      i += delimiter.length;
+      start = i;
+      continue;
+    }
+    // Words: track routine bodies.
+    if (isWordStart(c) && !isWordChar(src[i - 1])) {
+      let j = i + 1;
+      while (j < n && isWordChar(src[j]) && !(delimiter !== ';' && src.startsWith(delimiter, j))) j++;
+      const w = src.slice(i, j).toUpperCase();
+      hasCode = true;
+      if (words.length < 12) {
+        words.push(w);
+        if (!routine && words[0] === 'CREATE' && ['PROCEDURE', 'FUNCTION', 'TRIGGER', 'EVENT'].includes(w)) {
+          routine = routineHeader.test(src.slice(start, j).replace(/^(\s|--[^\n]*\n|\/\*[\s\S]*?\*\/)*/, ''));
+        }
+      }
+      if (routine && dialect !== 'sqlite') {
+        const opens =
+          dialect === 'mysql'
+            ? w === 'BEGIN' || (w === 'CASE' && depth > 0)
+            : (w === 'BEGIN' && nextWord(j) === 'ATOMIC') || (w === 'CASE' && depth > 0);
+        if (opens) depth++;
+        else if (w === 'END' && depth > 0 && !['IF', 'LOOP', 'WHILE', 'REPEAT'].includes(nextWord(j))) depth--;
+      }
+      i = j;
+      continue;
+    }
+    if (c === ';' && delimiter === ';' && depth === 0) {
       push(i);
       start = i + 1;
       i++;
       continue;
     }
-    if (c === '\n') {
+    if (c === '\n' && delimiter === ';' && depth === 0 && !routine) {
       // Blank line: newline, optional horizontal whitespace, newline.
       let j = i + 1;
       while (j < n && (src[j] === ' ' || src[j] === '\t' || src[j] === '\r')) j++;

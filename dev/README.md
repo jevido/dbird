@@ -46,6 +46,11 @@ lookups: *Automatic* notices the size and queries table names by prefix as you
 type. Setting the connection to *Load all tables and columns on connect* shows
 why that is not the default for big schemas.
 
+`dev/postgres/huge.sql` and `dev/mysql/huge.sql` are also plain scripts you
+can paste into a tab and run with `Alt+X`: they create a stored procedure,
+call it and drop it again, which shows dbird keeping procedure bodies (with
+their inner `;`) together.
+
 ## Things to try
 
 - Double-click `orders` in the tree to open its data, sort by a column, press

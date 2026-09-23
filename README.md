@@ -76,7 +76,10 @@ never offered. Set `DBIRD_NO_UPDATE=1` to turn checking off.
 | Grid: arrows, `Enter`, `Ctrl+C`, `Ctrl+Shift+C` | Move, view value, copy value, copy row |
 
 Statements are split on `;` and on blank lines (like DBeaver's default), with
-quotes, comments and PostgreSQL `$$` bodies respected.
+quotes, comments and PostgreSQL `$$` bodies respected. Routine bodies stay in
+one piece: MySQL `CREATE PROCEDURE/FUNCTION/TRIGGER/EVENT … BEGIN … END` and
+PostgreSQL `BEGIN ATOMIC … END`. MySQL scripts can also use `DELIMITER //`
+lines like in the mysql client.
 
 ## Development
 

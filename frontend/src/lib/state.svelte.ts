@@ -10,6 +10,7 @@ export type { Connection, Tab, Result };
 
 export interface TabRuntime {
   running: boolean;
+
   activeResult: number;
   error: string;
   lastRunAt: number;
@@ -40,6 +41,20 @@ export function errorText(e: unknown): string {
 }
 
 let offFileChanged: (() => void) | undefined;
+
+// Explains a failure caused by running another database's syntax, e.g. a
+// PostgreSQL script on a MySQL connection.
+function dialectHint(sql: string, dialect: Dialect): string {
+  const pg = /\$\$|\bLANGUAGE\s+plpgsql\b|::\s*[a-z_]+|\bILIKE\b/i;
+  const my = /`|\bAUTO_INCREMENT\b|\bENGINE\s*=|^\s*DELIMITER\b|\bUNSIGNED\b/im;
+  if (dialect !== 'postgres' && pg.test(sql)) {
+    return `\n\nThis looks like PostgreSQL syntax, but this tab is connected to ${dialect === 'mysql' ? 'MySQL' : 'SQLite'}.`;
+  }
+  if (dialect === 'postgres' && my.test(sql)) {
+    return '\n\nThis looks like MySQL syntax, but this tab is connected to PostgreSQL.';
+  }
+  return '';
+}
 
 const idleRuntime: TabRuntime = { running: false, activeResult: 0, error: '', lastRunAt: 0 };
 
@@ -530,7 +545,7 @@ class AppState {
         return;
       }
       const results = await QueryService.Run(tab.id, tab.connectionId, statements, this.maxRows, continueOnError);
-      const list = results ?? [];
+      const list = (results ?? []).map((r) => (r.error ? { ...r, error: r.error + dialectHint(r.sql, this.dialect(tab.connectionId)) } : r));
       this.results = { ...this.results, [tab.id]: list };
       // Focus the first failing result, else the last result set.
       let active = list.findIndex((r) => r.error);

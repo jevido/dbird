@@ -25,6 +25,85 @@ describe('splitStatements', () => {
   });
 });
 
+describe('routine bodies', () => {
+  it('keeps a MySQL procedure body together, blank lines and all', () => {
+    const src = `DROP PROCEDURE IF EXISTS p;
+CREATE PROCEDURE p(total INT)
+BEGIN
+  DECLARE i INT DEFAULT 1;
+
+  WHILE i <= total DO
+    IF i % 2 = 0 THEN
+      SET @x = CASE WHEN i > 10 THEN 'big' ELSE 'small' END;
+    END IF;
+    SET i = i + 1;
+  END WHILE;
+END;
+CALL p(3);`;
+    const st = texts(src, 'mysql');
+    expect(st).toHaveLength(3);
+    expect(st[1].startsWith('CREATE PROCEDURE p(total INT)')).toBe(true);
+    expect(st[1].endsWith('END WHILE;\nEND')).toBe(true);
+    expect(st[2]).toBe('CALL p(3)');
+  });
+  it('handles triggers, functions, labels and DEFINER', () => {
+    const src = `CREATE DEFINER=\`root\`@\`%\` TRIGGER t BEFORE INSERT ON x FOR EACH ROW
+BEGIN
+  SET NEW.a = 1;
+END;
+CREATE FUNCTION f() RETURNS INT DETERMINISTIC RETURN 1;
+CREATE PROCEDURE q() lbl: BEGIN LEAVE lbl; END;
+select 1`;
+    expect(texts(src, 'mysql')).toHaveLength(4);
+  });
+  it('supports DELIMITER like the mysql client', () => {
+    const src = `DELIMITER //
+CREATE PROCEDURE p()
+BEGIN
+  SELECT 1;
+  SELECT 2;
+END //
+DELIMITER ;
+CALL p();
+
+DELIMITER $$
+CREATE FUNCTION f() RETURNS INT DETERMINISTIC BEGIN RETURN 1; END$$
+DELIMITER ;
+select f();`;
+    const st = texts(src, 'mysql');
+    expect(st).toEqual([
+      'CREATE PROCEDURE p()\nBEGIN\n  SELECT 1;\n  SELECT 2;\nEND',
+      'CALL p()',
+      'CREATE FUNCTION f() RETURNS INT DETERMINISTIC BEGIN RETURN 1; END',
+      'select f()',
+    ]);
+  });
+  it('does not treat a transaction BEGIN or a column named function as a body', () => {
+    expect(texts('begin;\nupdate t set a = 1;\ncommit;', 'mysql')).toEqual(['begin', 'update t set a = 1', 'commit']);
+    expect(texts('create table t (function int);\nselect 1', 'mysql')).toEqual(['create table t (function int)', 'select 1']);
+  });
+  it('keeps PostgreSQL BEGIN ATOMIC bodies and $$ procedures together', () => {
+    const atomic = `CREATE FUNCTION f(a int) RETURNS int LANGUAGE sql
+BEGIN ATOMIC
+  SELECT a + 1;
+END;
+select f(1)`;
+    expect(texts(atomic)).toHaveLength(2);
+    const huge = `CREATE PROCEDURE make_relations(total int) LANGUAGE plpgsql AS $$
+BEGIN
+  FOR i IN 1..total LOOP
+    IF i % 1000 = 0 THEN
+      COMMIT;
+    END IF;
+  END LOOP;
+END;
+$$;
+CALL make_relations(300000);
+DROP PROCEDURE make_relations(int);`;
+    expect(texts(huge)).toEqual([huge.split('$$;')[0] + '$$', 'CALL make_relations(300000)', 'DROP PROCEDURE make_relations(int)']);
+  });
+});
+
 describe('unfilteredDelete', () => {
   it('flags deletes without WHERE', () => {
     expect(unfilteredDelete('delete from customers')).toBe('customers');
