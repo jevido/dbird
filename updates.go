@@ -39,6 +39,9 @@ type UpdateStatus struct {
 	ReleaseURL    string `json:"releaseUrl"`
 	Error         string `json:"error"`
 	CheckedAt     string `json:"checkedAt"`
+	// PackageManaged is set when dbird was installed by a package manager
+	// (e.g. pacman or apt) and should be updated with it.
+	PackageManaged bool `json:"packageManaged"`
 }
 
 // UpdateService checks GitHub Releases in the background, downloads and
@@ -148,6 +151,17 @@ func canSelfUpdate() bool {
 	return true
 }
 
+// packageManaged reports whether the binary lives in a system location only a
+// package manager writes to (Linux /usr, /opt).
+func packageManaged() bool {
+	exe, err := os.Executable()
+	if err != nil || runtime.GOOS != "linux" {
+		return false
+	}
+	exe, _ = filepath.EvalSymlinks(exe)
+	return strings.HasPrefix(exe, "/usr/") || strings.HasPrefix(exe, "/opt/")
+}
+
 func (s *UpdateService) set(fn func(st *UpdateStatus)) {
 	s.mu.Lock()
 	fn(&s.status)
@@ -194,7 +208,7 @@ func (s *UpdateService) run(ctx context.Context) {
 		st.State = "downloading"
 	})
 	if !canSelfUpdate() {
-		s.set(func(st *UpdateStatus) { st.State = "manual" })
+		s.set(func(st *UpdateStatus) { st.State = "manual"; st.PackageManaged = packageManaged() })
 		return
 	}
 	if err := u.DownloadAndInstall(ctx); err != nil {

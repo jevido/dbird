@@ -48,6 +48,10 @@
     <button class="update ready" onclick={restart} disabled={restarting} title="Install the downloaded update and restart">
       {restarting ? 'Restarting…' : `Restart to update to ${status.latestVersion}`}
     </button>
+  {:else if status?.state === 'manual' && status.packageManaged}
+    <button class="update" onclick={() => UpdateService.OpenReleasePage()} title="Installed by your package manager; update it there (see the release page for the command)">
+      {status.latestVersion} available — update with your package manager
+    </button>
   {:else if status?.state === 'manual'}
     <button class="update" onclick={() => UpdateService.OpenReleasePage()} title="This install can't update itself; download the new version">
       {status.latestVersion} available — download

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=dbird
+GenericName=SQL Client
+Comment=Lightweight SQL client for PostgreSQL, MySQL and SQLite
+Exec=dbird
+Icon=dbird
+Terminal=false
+Categories=Development;Database;
+Keywords=sql;database;postgres;postgresql;mysql;mariadb;sqlite;query;
+StartupNotify=true

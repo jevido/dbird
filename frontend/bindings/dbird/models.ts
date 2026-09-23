@@ -74,4 +74,10 @@ export interface UpdateStatus {
     "releaseUrl": string;
     "error": string;
     "checkedAt": string;
+
+    /**
+     * PackageManaged is set when dbird was installed by a package manager
+     * (e.g. pacman or apt) and should be updated with it.
+     */
+    "packageManaged": boolean;
 }
