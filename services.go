@@ -144,6 +144,43 @@ func (s *ConnectionService) Tables(ctx context.Context, id, schema string) ([]db
 	return dbx.Tables(ctx, db, driver, schema)
 }
 
+// TablePage is one page of the sidebar's table list.
+type TablePage struct {
+	Tables []dbx.TableInfo `json:"tables"`
+	// Total is the number of matching tables; only set for the first page.
+	Total int `json:"total"`
+}
+
+// TablesPage lists up to limit (max 1000) tables in schema whose name
+// contains filter, starting after the name after. The first page (after == "")
+// also reports the total, so the sidebar can offer to load more.
+func (s *ConnectionService) TablesPage(ctx context.Context, id, schema, filter, after string, limit int) (TablePage, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 500
+	}
+	if err := s.ensure(ctx, id); err != nil {
+		return TablePage{}, err
+	}
+	db, driver, err := s.dbm.DB(id)
+	if err != nil {
+		return TablePage{}, err
+	}
+	tables, err := dbx.TablesPage(ctx, db, driver, schema, filter, after, limit)
+	if err != nil {
+		return TablePage{}, err
+	}
+	page := TablePage{Tables: tables}
+	if after == "" {
+		page.Total = len(tables)
+		if len(tables) == limit {
+			if page.Total, err = dbx.TableCountMatching(ctx, db, driver, schema, filter); err != nil {
+				return TablePage{}, err
+			}
+		}
+	}
+	return page, nil
+}
+
 // Columns lists the columns of schema.table.
 func (s *ConnectionService) Columns(ctx context.Context, id, schema, table string) ([]dbx.ColumnInfo, error) {
 	if err := s.ensure(ctx, id); err != nil {

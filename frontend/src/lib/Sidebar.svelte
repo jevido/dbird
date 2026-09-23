@@ -11,7 +11,17 @@
   let expanded = $state<Record<string, boolean>>({});
   let nodeState = $state<Record<string, NodeState>>({});
   let schemas = $state.raw<Record<string, string[]>>({});
-  let tables = $state.raw<Record<string, TableInfo[]>>({});
+  // Tables per schema, loaded a page at a time. `filter` is the name filter
+  // the server applied ("" = none); a list with every table loaded is
+  // filtered here instead.
+  interface TableList {
+    items: TableInfo[];
+    total: number;
+    filter: string;
+  }
+  const PAGE = 500;
+  let tables = $state.raw<Record<string, TableList>>({});
+  const complete = (l: TableList | undefined) => !!l && l.filter === '' && l.items.length >= l.total;
   let columns = $state.raw<Record<string, ColumnInfo[]>>({});
   let filter = $state('');
 
@@ -35,17 +45,35 @@
           (c) =>
             c.name.toLowerCase().includes(needle) ||
             Object.entries(tables).some(
-              ([key, list]) => key.startsWith(c.id + '\u0000') && list.some((t) => t.name.toLowerCase().includes(needle)),
+              ([key, list]) =>
+                key.startsWith(c.id + '\u0000') &&
+                (complete(list) ? list.items.some((t) => t.name.toLowerCase().includes(needle)) : list.items.length > 0),
             ),
         )
       : app.connections,
   );
 
   function visibleTables(c: Connection, key: string): TableInfo[] {
-    const list = tables[key] ?? [];
-    if (!needle || c.name.toLowerCase().includes(needle)) return list;
-    return list.filter((t) => t.name.toLowerCase().includes(needle));
+    const list = tables[key];
+    if (!list) return [];
+    if (!complete(list) || !needle || c.name.toLowerCase().includes(needle)) return list.items;
+    return list.items.filter((t) => t.name.toLowerCase().includes(needle));
   }
+
+  // Big schemas aren't fully loaded, so the filter box asks the server.
+  $effect(() => {
+    const f = needle;
+    const stale = Object.entries(tables).filter(([, l]) => !complete(l) && l.filter !== f);
+    if (stale.length === 0) return;
+    const t = setTimeout(() => {
+      for (const [key] of stale) {
+        const [connId, schema] = key.split('\u0000');
+        const c = app.connection(connId);
+        if (c) loadTables(c, schema);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  });
 
   async function load<T>(key: string, fn: () => Promise<T>, set: (v: T) => void) {
     nodeState[key] = { loading: true };
@@ -69,9 +97,23 @@
     }
   }
 
-  function loadTables(c: Connection, schema: string) {
+  // Loads the first page of schema's tables, or with more=true the next one.
+  function loadTables(c: Connection, schema: string, more = false) {
     const key = k.schema(c.id, schema);
-    return load(key, () => ConnectionService.Tables(c.id, schema), (v) => (tables = { ...tables, [key]: v ?? [] }));
+    const prev = tables[key];
+    const filter = more ? (prev?.filter ?? '') : complete(prev) ? '' : needle;
+    const after = more && prev ? (prev.items.at(-1)?.name ?? '') : '';
+    return load(
+      more ? key + '\u0000more' : key,
+      () => ConnectionService.TablesPage(c.id, schema, filter, after, PAGE),
+      (page) => {
+        const items = page.tables ?? [];
+        tables = {
+          ...tables,
+          [key]: more && prev ? { ...prev, items: [...prev.items, ...items] } : { items, total: page.total, filter },
+        };
+      },
+    );
   }
 
   function loadColumns(c: Connection, schema: string, table: string) {
@@ -289,7 +331,7 @@
               <svg class="ico" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" fill="none" /><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4" stroke="currentColor" fill="none" /></svg>
               <span class="label">{s}</span>
               {#if sst?.loading}<span class="spin"></span>{/if}
-              {#if tables[skey]}<span class="count">{tables[skey].length}</span>{/if}
+              {#if tables[skey]}<span class="count">{tables[skey].total.toLocaleString()}</span>{/if}
             </div>
           {/if}
           {#if flat || expanded[skey]}
@@ -297,8 +339,8 @@
             {#if sst?.error}
               <div class="node err" style:--depth={depth}>{sst.error}</div>
             {/if}
-            {#if tables[skey]?.length === 0}
-              <div class="node muted" style:--depth={depth}>No tables</div>
+            {#if tables[skey]?.items.length === 0}
+              <div class="node muted" style:--depth={depth}>{tables[skey].filter ? 'No matching tables' : 'No tables'}</div>
             {/if}
             {#each visibleTables(c, skey) as t (t.name)}
               {@const tkey = k.table(c.id, s, t.name)}
@@ -339,6 +381,18 @@
                 {/each}
               {/if}
             {/each}
+            {#if tables[skey] && tables[skey].items.length < tables[skey].total}
+              {@const list = tables[skey]}
+              {@const busy = nodeState[skey + '\u0000more']?.loading}
+              <button class="node more" style:--depth={depth} disabled={busy} onclick={() => loadTables(c, s, true)}>
+                <span class="caret"></span>
+                {busy ? 'Loading…' : `Show ${Math.min(PAGE, list.total - list.items.length).toLocaleString()} more`}
+                <span class="count">{list.items.length.toLocaleString()} of {list.total.toLocaleString()}{list.filter ? ' matching' : ''}</span>
+              </button>
+              {#if !list.filter}
+                <div class="node muted hint" style:--depth={depth}><span class="caret"></span>Type in the filter box to search all of them</div>
+              {/if}
+            {/if}
           {/if}
         {/each}
       {/if}
@@ -457,6 +511,26 @@
     height: auto;
     padding-top: 3px;
     padding-bottom: 3px;
+    font-size: 11.5px;
+  }
+  .node.more {
+    width: 100%;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .node.more:disabled {
+    color: var(--text-muted);
+    cursor: default;
+  }
+  .node.more .count {
+    margin-left: auto;
+  }
+  .node.hint {
     font-size: 11.5px;
   }
   .node.muted {

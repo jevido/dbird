@@ -124,6 +124,15 @@ export function Tables(id: string, schema: string): $CancellablePromise<dbx$0.Ta
 }
 
 /**
+ * TablesPage lists up to limit (max 1000) tables in schema whose name
+ * contains filter, starting after the name after. The first page (after == "")
+ * also reports the total, so the sidebar can offer to load more.
+ */
+export function TablesPage(id: string, schema: string, filter: string, after: string, limit: number): $CancellablePromise<$models.TablePage> {
+    return $Call.ByID(3164927595, id, schema, filter, after, limit);
+}
+
+/**
  * Test tries to connect with c and returns the server version.
  */
 export function Test(c: store$0.Connection): $CancellablePromise<string> {

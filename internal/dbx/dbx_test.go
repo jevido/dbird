@@ -2,6 +2,7 @@ package dbx
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -177,5 +178,50 @@ func TestCompletionLookups(t *testing.T) {
 	got, _ = TablesByPrefix(ctx, db, driver, "main", "", 2)
 	if len(got) != 2 {
 		t.Fatalf("limit = %v", got)
+	}
+}
+
+func TestTablesPage(t *testing.T) {
+	ctx := context.Background()
+	c := store.Connection{ID: "pg", Driver: SQLite, Database: filepath.Join(t.TempDir(), "p.db")}
+	m := NewManager()
+	defer m.Close()
+	if err := m.Connect(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	var stmts []string
+	for i := 1; i <= 25; i++ {
+		stmts = append(stmts, fmt.Sprintf("create table t%02d (id int)", i))
+	}
+	stmts = append(stmts, "create view v_t1 as select 1", "create table under_score (id int)")
+	if _, err := m.Run(ctx, "t", "pg", stmts, 10, false); err != nil {
+		t.Fatal(err)
+	}
+	db, driver, _ := m.DB("pg")
+	var all []string
+	after := ""
+	for {
+		page, err := TablesPage(ctx, db, driver, "main", "", after, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, tb := range page {
+			all = append(all, tb.Name)
+		}
+		if len(page) < 10 {
+			break
+		}
+		after = page[len(page)-1].Name
+	}
+	if len(all) != 27 || all[0] != "t01" || all[26] != "v_t1" {
+		t.Fatalf("paged = %d %v", len(all), all)
+	}
+	got, _ := TablesPage(ctx, db, driver, "main", "T1", "", 100)
+	if len(got) != 11 { // t10..t19, v_t1 (case-insensitive contains)
+		t.Fatalf("filter = %v", got)
+	}
+	n, _ := TableCountMatching(ctx, db, driver, "main", "_")
+	if n != 2 { // "_" is literal: under_score, v_t1
+		t.Fatalf("count(_) = %d", n)
 	}
 }
