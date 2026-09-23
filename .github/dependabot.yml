@@ -1,22 +1,32 @@
+# One grouped PR per ecosystem per month.
 version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      go:
+        patterns: ["*"]
     ignore:
       # Wails v3 is pre-release; upgrade it deliberately after reading the changelog.
       - dependency-name: github.com/wailsapp/wails/v3
   - package-ecosystem: npm
     directory: /frontend
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      codemirror:
-        patterns: ["@codemirror/*", "@lezer/*", "codemirror"]
+      frontend:
+        patterns: ["*"]
     ignore:
       - dependency-name: "@wailsio/runtime"
+      # Major versions (e.g. TypeScript 7) need manual testing.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
