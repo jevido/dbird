@@ -95,7 +95,7 @@ jobs:
           mkdir -p dist
           (cd bin && zip -9 "../dist/dbird-windows-amd64.zip" dbird.exe)
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dbird-${{ matrix.target }}-${{ matrix.arch }}
           path: dist/*
