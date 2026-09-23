@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Wails v3 is pre-release; upgrade it deliberately after reading the changelog.
+      - dependency-name: github.com/wailsapp/wails/v3
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      codemirror:
+        patterns: ["@codemirror/*", "@lezer/*", "codemirror"]
+    ignore:
+      - dependency-name: "@wailsio/runtime"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

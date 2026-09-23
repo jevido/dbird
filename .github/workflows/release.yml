@@ -1,0 +1,124 @@
+name: Release
+
+# Push a tag like v0.1.0 to build every platform and publish a GitHub release.
+# Running the workflow manually builds the artifacts without publishing.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to stamp into the build (e.g. 0.1.0)
+        required: true
+        default: 0.0.0-test
+
+permissions:
+  contents: write
+
+env:
+  WAILS_VERSION: v3.0.0-beta.18
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, target: linux, arch: amd64 }
+          - { os: ubuntu-24.04-arm, target: linux, arch: arm64 }
+          - { os: macos-15, target: darwin, arch: universal }
+          # Windows builds with CGO disabled (all drivers are pure Go), so it cross-compiles from Linux.
+          - { os: ubuntu-24.04, target: windows, arch: amd64 }
+    runs-on: ${{ matrix.os }}
+    env:
+      UPDATE_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="${{ inputs.version }}"; fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config file libgtk-4-dev libwebkitgtk-6.0-dev
+
+      - name: Install wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
+
+      - name: Stamp version
+        run: scripts/set-version.sh "$VERSION"
+
+      - name: Build Linux packages
+        if: matrix.target == 'linux'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          GIT_COMMITTER_NAME: dbird
+          GIT_COMMITTER_EMAIL: noreply@github.com
+        run: |
+          wails3 task linux:package VERSION="$VERSION" UPDATE_REPO="$UPDATE_REPO"
+          mkdir -p dist
+          # Portable archive: the one the in-app updater downloads.
+          tar -C bin -czf "dist/dbird-linux-${{ matrix.arch }}.tar.gz" dbird
+          rpmarch=$([ "${{ matrix.arch }}" = amd64 ] && echo x86_64 || echo aarch64)
+          mv bin/dbird.deb "dist/dbird_${VERSION}_${{ matrix.arch }}.deb"
+          mv bin/dbird.rpm "dist/dbird-${VERSION}.${rpmarch}.rpm"
+          mv bin/dbird.pkg.tar.zst "dist/dbird-${VERSION}-${rpmarch}.pkg.tar.zst"
+          mv bin/dbird-*.AppImage "dist/dbird-${VERSION}-${rpmarch}.AppImage"
+
+      - name: Build macOS app (universal)
+        if: matrix.target == 'darwin'
+        run: |
+          wails3 task darwin:package:universal VERSION="$VERSION" UPDATE_REPO="$UPDATE_REPO"
+          mkdir -p dist
+          ditto -c -k --keepParent bin/dbird.app dist/dbird-darwin-universal.zip
+
+      - name: Build Windows exe
+        if: matrix.target == 'windows'
+        run: |
+          wails3 build GOOS=windows GOARCH=amd64 VERSION="$VERSION" UPDATE_REPO="$UPDATE_REPO"
+          mkdir -p dist
+          (cd bin && zip -9 "../dist/dbird-windows-amd64.zip" dbird.exe)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbird-${{ matrix.target }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > checksums.txt && cat checksums.txt
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=(--generate-notes --title "dbird ${GITHUB_REF_NAME#v}")
+          case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" "${flags[@]}"

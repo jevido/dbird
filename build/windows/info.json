@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.0.1"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.0.1",
+			"CompanyName": "dbird",
+			"FileDescription": "A lightweight SQL client",
+			"LegalCopyright": "(c) 2026, dbird",
+			"ProductName": "dbird",
+			"Comments": "Multi-connection SQL editor"
+		}
+	}
+}
