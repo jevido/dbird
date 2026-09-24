@@ -28,11 +28,16 @@ type Result struct {
 	Truncated    bool    `json:"truncated"`
 	DurationMs   float64 `json:"durationMs"`
 	Error        string  `json:"error"`
+	// Editable is set when the rows can be edited in the grid; otherwise
+	// ReadOnly says why not.
+	Editable *Editable `json:"editable"`
+	ReadOnly string    `json:"readOnly"`
 }
 
 // Querier is satisfied by *sql.DB, *sql.Conn and *sql.Tx.
 type Querier interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 

@@ -4,6 +4,9 @@
 export type {
     Column,
     ColumnInfo,
+    EditRequest,
+    Editable,
     Result,
+    RowEdit,
     TableInfo
 } from "./models.js";

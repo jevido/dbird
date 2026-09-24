@@ -40,7 +40,7 @@ func Schemas(ctx context.Context, db *sql.DB, driver string) ([]string, error) {
 }
 
 // DefaultSchema returns the schema unqualified names resolve to.
-func DefaultSchema(ctx context.Context, db *sql.DB, driver string) (string, error) {
+func DefaultSchema(ctx context.Context, db Querier, driver string) (string, error) {
 	var q string
 	switch driver {
 	case Postgres:
@@ -99,7 +99,7 @@ func Tables(ctx context.Context, db *sql.DB, driver, schema string) ([]TableInfo
 }
 
 // Columns lists the columns of schema.table.
-func Columns(ctx context.Context, db *sql.DB, driver, schema, table string) ([]ColumnInfo, error) {
+func Columns(ctx context.Context, db Querier, driver, schema, table string) ([]ColumnInfo, error) {
 	var (
 		q    string
 		args []any

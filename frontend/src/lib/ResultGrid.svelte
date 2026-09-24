@@ -2,8 +2,16 @@
   import type { Result } from './state.svelte';
   import { Clipboard } from '@wailsio/runtime';
   import { app } from './state.svelte';
+  import { editsFor } from './gridedits.svelte';
 
   let { result }: { result: Result } = $props();
+
+  const edits = $derived(editsFor(result));
+  // Result column c maps to a table column that can be edited.
+  const canEdit = (c: number) => !!result.editable?.columns?.[c];
+  // The cell being edited: r is the row index in result.rows.
+  let editing = $state<{ r: number; c: number; text: string; wasNull: boolean } | null>(null);
+  let menu = $state<{ x: number; y: number; r: number; c: number } | null>(null);
 
   const ROW_H = 24;
   const OVERSCAN = 12;
@@ -37,6 +45,8 @@
   $effect.pre(() => {
     void result;
     selected = null;
+    editing = null;
+    menu = null;
     sort = null;
     scrollTop = 0;
     if (viewport) viewport.scrollTop = 0;
@@ -66,15 +76,21 @@
     return a.localeCompare(b);
   }
 
-  const rows = $derived.by(() => {
-    if (!sort) return rawRows;
+  // Row indices (into result.rows) in display order. Sorting uses the values
+  // as queried, so rows don't jump around while being edited.
+  const order = $derived.by(() => {
+    void edits.version;
+    const idx = rawRows.map((_, i) => i);
+    if (!sort) return idx;
     const { col, dir } = sort;
-    return [...rawRows].sort((x, y) => dir * compare(x[col], y[col]));
+    return idx.sort((a, b) => dir * compare(rawRows[a][col], rawRows[b][col]));
   });
+  const cell = (r: number, c: number) => (void edits.version, edits.value(r, c));
+  const rowValues = (r: number) => columns.map((_, c) => cell(r, c));
 
   const first = $derived(Math.max(0, Math.floor(scrollTop / ROW_H) - OVERSCAN));
-  const last = $derived(Math.min(rows.length, Math.ceil((scrollTop + viewportH) / ROW_H) + OVERSCAN));
-  const visible = $derived(rows.slice(first, last));
+  const last = $derived(Math.min(order.length, Math.ceil((scrollTop + viewportH) / ROW_H) + OVERSCAN));
+  const visible = $derived(order.slice(first, last));
   const template = $derived(`52px ${widths.map((w) => w + 'px').join(' ')}`);
   const totalW = $derived(52 + widths.reduce((a, b) => a + b, 0));
 
@@ -119,22 +135,92 @@
 
   export function copyAll() {
     const head = columns.map((c) => tsvCell(c.name)).join('\t');
-    const body = rows.map((r) => r.map(tsvCell).join('\t')).join('\n');
-    copy(head + '\n' + body, `${rows.length} rows`);
+    const body = order.map((r) => rowValues(r).map(tsvCell).join('\t')).join('\n');
+    copy(head + '\n' + body, `${order.length} rows`);
+  }
+
+  function view(r: number, c: number) {
+    viewing = { column: columns[c].name, type: columns[c].type, value: cell(r, c) };
+  }
+
+  // Starts editing a cell, with text replacing its value when given (typing
+  // on a selected cell).
+  function startEdit(r: number, c: number, text?: string) {
+    if (!canEdit(c)) {
+      app.toast(`Read-only: ${result.editable ? 'this column can\'t be edited here' : result.readOnly || 'not editable'}`);
+      return;
+    }
+    const v = cell(r, c);
+    editing = { r, c, text: text ?? v ?? '', wasNull: v == null && text == null };
+  }
+
+  function commitEdit() {
+    if (!editing) return;
+    const { r, c, text, wasNull } = editing;
+    editing = null;
+    // An untouched NULL stays NULL rather than becoming ''.
+    if (!(wasNull && text === '')) edits.set(r, c, text);
+    viewport?.focus();
+  }
+
+  function cancelEdit() {
+    editing = null;
+    viewport?.focus();
+  }
+
+  function onEditKey(e: KeyboardEvent) {
+    e.stopPropagation();
+    if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      commitEdit();
+      moveSelection(1, 0);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      commitEdit();
+      moveSelection(0, e.shiftKey ? -1 : 1);
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      // Let the results panel save, including this cell.
+      commitEdit();
+      viewport?.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+      e.preventDefault();
+    }
+  }
+
+  function moveSelection(dr: number, dc: number) {
+    if (!selected) return;
+    const nr = Math.max(0, Math.min(order.length - 1, selected.r + dr));
+    const nc = Math.max(0, Math.min(columns.length - 1, selected.c + dc));
+    selected = { r: nr, c: nc };
+    if (viewport) {
+      const top = nr * ROW_H;
+      if (top < viewport.scrollTop) viewport.scrollTop = top;
+      else if (top + ROW_H * 2 > viewport.scrollTop + viewportH) viewport.scrollTop = top + ROW_H * 2 - viewportH;
+    }
+  }
+
+  // Closes the context menu and runs fn on the cell it was opened on.
+  function menuAction(fn: (r: number, c: number) => void) {
+    if (!menu) return;
+    const { r, c } = menu;
+    menu = null;
+    fn(r, c);
+  }
+
+  function openMenu(e: MouseEvent, pos: number, c: number) {
+    e.preventDefault();
+    selected = { r: pos, c };
+    menu = { x: e.clientX, y: e.clientY, r: order[pos], c };
   }
 
   function onkeydown(e: KeyboardEvent) {
     if (!selected) return;
-    const { r, c } = selected;
+    const { r: pos, c } = selected;
+    const r = order[pos];
     const move = (dr: number, dc: number) => {
-      const nr = Math.max(0, Math.min(rows.length - 1, r + dr));
-      const nc = Math.max(0, Math.min(columns.length - 1, c + dc));
-      selected = { r: nr, c: nc };
-      if (viewport) {
-        const top = nr * ROW_H;
-        if (top < viewport.scrollTop) viewport.scrollTop = top;
-        else if (top + ROW_H * 2 > viewport.scrollTop + viewportH) viewport.scrollTop = top + ROW_H * 2 - viewportH;
-      }
+      moveSelection(dr, dc);
       e.preventDefault();
     };
     switch (e.key) {
@@ -144,18 +230,30 @@
       case 'ArrowRight': return move(0, 1);
       case 'PageDown': return move(Math.floor(viewportH / ROW_H), 0);
       case 'PageUp': return move(-Math.floor(viewportH / ROW_H), 0);
-      case 'Home': return move(-r, 0);
-      case 'End': return move(rows.length, 0);
+      case 'Home': return move(-pos, 0);
+      case 'End': return move(order.length, 0);
+    }
+    const mod = e.ctrlKey || e.metaKey;
+    if (e.key === 'F2' || (e.key === 'Enter' && !e.shiftKey && result.editable)) {
+      e.preventDefault();
+      startEdit(r, c);
+      return;
     }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      viewing = { column: columns[c].name, type: columns[c].type, value: rows[r][c] };
+      view(r, c);
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+    if (mod && e.key === 'c') {
       e.preventDefault();
-      if (e.shiftKey) copy(rows[r].map(tsvCell).join('\t'), 'row');
-      else copy(rows[r][c] ?? '', 'value');
+      if (e.shiftKey) copy(rowValues(r).map(tsvCell).join('\t'), 'row');
+      else copy(cell(r, c) ?? '', 'value');
+      return;
+    }
+    // Typing on an editable cell starts editing it, like a spreadsheet.
+    if (!mod && !e.altKey && e.key.length === 1 && canEdit(c)) {
+      e.preventDefault();
+      startEdit(r, c, e.key);
     }
   }
 </script>
@@ -170,7 +268,7 @@
     onscroll={(e) => (scrollTop = e.currentTarget.scrollTop)}
     tabindex="0"
     role="grid"
-    aria-rowcount={rows.length}
+    aria-rowcount={order.length}
     {onkeydown}
   >
     <div class="head" style:grid-template-columns={template} style:width="{totalW}px">
@@ -191,30 +289,71 @@
         </button>
       {/each}
     </div>
-    <div class="body" style:height="{rows.length * ROW_H}px" style:width="{totalW}px">
-      {#each visible as row, k (first + k)}
-        {@const r = first + k}
+    <div class="body" style:height="{order.length * ROW_H}px" style:width="{totalW}px">
+      {#each visible as r, k (r)}
+        {@const pos = first + k}
         <div
-          class={['row', r % 2 === 1 && 'odd', selected?.r === r && 'selrow']}
+          class={['row', pos % 2 === 1 && 'odd', selected?.r === pos && 'selrow', edits.cells[r] && 'dirty']}
           style:grid-template-columns={template}
-          style:transform="translateY({r * ROW_H}px)"
+          style:transform="translateY({pos * ROW_H}px)"
         >
-          <div class="cell rownum">{r + 1}</div>
-          {#each row as v, c (c)}
-            <div
-              class={['cell', v == null && 'null', selected?.r === r && selected?.c === c && 'sel']}
-              role="gridcell"
-              tabindex="-1"
-              title={v ?? 'NULL'}
-              onmousedown={() => (selected = { r, c })}
-              ondblclick={() => (viewing = { column: columns[c].name, type: columns[c].type, value: v })}
-            >
-              {v == null ? 'NULL' : v.length > 300 ? v.slice(0, 300) + '…' : v}
-            </div>
+          <div class="cell rownum">{pos + 1}</div>
+          {#each columns as _, c (c)}
+            {@const v = cell(r, c)}
+            {#if editing?.r === r && editing.c === c}
+              <div class="cell editing">
+                <!-- svelte-ignore a11y_autofocus -->
+                <textarea
+                  bind:value={editing.text}
+                  placeholder={editing.wasNull ? 'NULL' : ''}
+                  rows="1"
+                  spellcheck="false"
+                  onkeydown={onEditKey}
+                  onblur={commitEdit}
+                  {@attach (el) => {
+                    el.focus();
+                    el.setSelectionRange(el.value.length, el.value.length);
+                  }}
+                ></textarea>
+              </div>
+            {:else}
+              <div
+                class={[
+                  'cell',
+                  v == null && 'null',
+                  edits.edited(r, c) && 'changed',
+                  selected?.r === pos && selected?.c === c && 'sel',
+                ]}
+                role="gridcell"
+                tabindex="-1"
+                title={v ?? 'NULL'}
+                onmousedown={() => (selected = { r: pos, c })}
+                ondblclick={() => (result.editable && canEdit(c) ? startEdit(r, c) : view(r, c))}
+                oncontextmenu={(e) => openMenu(e, pos, c)}
+              >
+                {v == null ? 'NULL' : v.length > 300 ? v.slice(0, 300) + '…' : v}
+              </div>
+            {/if}
           {/each}
         </div>
       {/each}
     </div>
+  </div>
+{/if}
+
+{#if menu}
+  {@const m = menu}
+  <div class="mbackdrop" role="presentation" onmousedown={() => (menu = null)} oncontextmenu={(e) => (e.preventDefault(), (menu = null))}></div>
+  <div class="cmenu" style:left="{m.x}px" style:top="{m.y}px" role="menu">
+    {#if canEdit(m.c)}
+      <button role="menuitem" onclick={() => menuAction((r, c) => startEdit(r, c))}>Edit <kbd>F2</kbd></button>
+      <button role="menuitem" onclick={() => menuAction((r, c) => edits.set(r, c, null))} disabled={cell(m.r, m.c) == null}>Set to NULL</button>
+      <button role="menuitem" onclick={() => menuAction((r, c) => edits.revert(r, c))} disabled={!edits.edited(m.r, m.c)}>Revert value</button>
+      <div class="msep"></div>
+    {/if}
+    <button role="menuitem" onclick={() => menuAction((r, c) => view(r, c))}>View value</button>
+    <button role="menuitem" onclick={() => menuAction((r, c) => copy(cell(r, c) ?? '', 'value'))}>Copy value</button>
+    <button role="menuitem" onclick={() => menuAction((r) => copy(rowValues(r).map(tsvCell).join('\t'), 'row'))}>Copy row</button>
   </div>
 {/if}
 
@@ -356,6 +495,84 @@
   .cell.null {
     color: var(--text-faint);
     font-style: italic;
+  }
+  .row.dirty .rownum {
+    color: var(--syn-number);
+    box-shadow: inset 3px 0 var(--syn-number);
+  }
+  .cell.changed {
+    background: color-mix(in srgb, var(--syn-number) 18%, transparent);
+    color: var(--text);
+    font-style: normal;
+  }
+  .cell.editing {
+    padding: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 4;
+  }
+  .cell.editing textarea {
+    display: block;
+    width: 100%;
+    min-height: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0 7px;
+    border: 2px solid var(--accent);
+    border-radius: 0;
+    background: var(--input-bg);
+    color: var(--text);
+    font: inherit;
+    line-height: 20px;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+    white-space: pre;
+  }
+  .mbackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+  }
+  .cmenu {
+    position: fixed;
+    z-index: 56;
+    min-width: 170px;
+    padding: 4px;
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    font-size: 12.5px;
+  }
+  .cmenu button {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 5px 9px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .cmenu button:hover:not(:disabled) {
+    background: var(--hover-strong);
+  }
+  .cmenu button:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+  .cmenu kbd {
+    color: var(--text-faint);
+    font-size: 11px;
+  }
+  .msep {
+    height: 1px;
+    margin: 4px 2px;
+    background: var(--border);
   }
   .cell.sel {
     outline: 2px solid var(--accent);

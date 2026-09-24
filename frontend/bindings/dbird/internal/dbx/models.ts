@@ -20,6 +20,40 @@ export interface ColumnInfo {
 }
 
 /**
+ * EditRequest asks for rows of a table to be updated.
+ */
+export interface EditRequest {
+    "schema": string;
+    "table": string;
+
+    /**
+     * KeyColumns names the primary key columns, matching RowEdit.Key.
+     */
+    "keyColumns": string[] | null;
+    "rows": RowEdit[] | null;
+}
+
+/**
+ * Editable describes how a result set maps back to a table, so its cells can
+ * be edited and saved with UPDATE statements.
+ */
+export interface Editable {
+    "schema": string;
+    "table": string;
+
+    /**
+     * Columns has, per result column, the table column it shows, or "" when
+     * it shows an expression or a type dbird can't edit (binary, arrays).
+     */
+    "columns": string[] | null;
+
+    /**
+     * Key lists the result columns holding the table's primary key.
+     */
+    "key": number[] | null;
+}
+
+/**
  * Result is the outcome of executing one statement.
  */
 export interface Result {
@@ -35,6 +69,22 @@ export interface Result {
     "truncated": boolean;
     "durationMs": number;
     "error": string;
+
+    /**
+     * Editable is set when the rows can be edited in the grid; otherwise
+     * ReadOnly says why not.
+     */
+    "editable": Editable | null;
+    "readOnly": string;
+}
+
+/**
+ * RowEdit is the change to one row: the original values of its primary key
+ * (in Editable.Key order) and the new value per column (nil for NULL).
+ */
+export interface RowEdit {
+    "key": (string | null)[] | null;
+    "changes": { [_ in string]?: string | null } | null;
 }
 
 /**

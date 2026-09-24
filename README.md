@@ -27,6 +27,12 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
   tables, look up beyond that). Tabs are restored
   on restart, can be renamed (double-click), reordered (drag) and closed with
   middle-click.
+- **Editing results**: results of a `SELECT` from a single table with its
+  primary key are editable. Double-click a cell (or press F2, or just start
+  typing), right-click to set NULL or revert, and save with the bar below the
+  grid or Ctrl+S. Changes are written with `UPDATE … WHERE <primary key>` in
+  one transaction, and nothing is saved unless every row still matches.
+  Joins, grouping, views and binary or array columns stay read-only.
 - **Execution**: each tab has its own dedicated database session, so `SET`,
   `USE`, `BEGIN`/`COMMIT` and temp tables behave like in a terminal client.
   Queries can be cancelled. A `DELETE` without a `WHERE` clause asks for

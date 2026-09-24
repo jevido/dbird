@@ -7,9 +7,8 @@
   let dragFrom = $state(-1);
   let dragOver = $state(-1);
 
-  function close(id: string) {
-    forgetEditorState(id);
-    app.closeTab(id);
+  async function close(id: string) {
+    if (await app.closeTab(id)) forgetEditorState(id);
   }
 
   function startRename(id: string, title: string) {

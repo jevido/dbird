@@ -35,3 +35,11 @@ export function CloseTab(tabID: string): $CancellablePromise<void> {
 export function Run(tabID: string, connID: string, statements: string[] | null, maxRows: number, continueOnError: boolean): $CancellablePromise<dbx$0.Result[] | null> {
     return $Call.ByID(3599327438, tabID, connID, statements, maxRows, continueOnError);
 }
+
+/**
+ * SaveEdits writes cells edited in the result grid back to their table, in
+ * one transaction on connection connID. It returns the number of rows updated.
+ */
+export function SaveEdits(connID: string, req: dbx$0.EditRequest): $CancellablePromise<number> {
+    return $Call.ByID(2830327577, connID, req);
+}

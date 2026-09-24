@@ -392,6 +392,22 @@ func (s *QueryService) Run(ctx context.Context, tabID, connID string, statements
 	return s.dbm.Run(ctx, tabID, connID, statements, maxRows, continueOnError)
 }
 
+// SaveEdits writes cells edited in the result grid back to their table, in
+// one transaction on connection connID. It returns the number of rows updated.
+func (s *QueryService) SaveEdits(ctx context.Context, connID string, req dbx.EditRequest) (int, error) {
+	if len(req.Rows) == 0 {
+		return 0, errors.New("nothing to save")
+	}
+	if err := s.conns.ensure(ctx, connID); err != nil {
+		return 0, err
+	}
+	db, driver, err := s.dbm.DB(connID)
+	if err != nil {
+		return 0, err
+	}
+	return dbx.SaveEdits(ctx, db, driver, req)
+}
+
 // Cancel aborts the running query of tabID.
 func (s *QueryService) Cancel(tabID string) error {
 	return s.dbm.Cancel(tabID)

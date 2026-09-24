@@ -1,12 +1,23 @@
 <script lang="ts">
   import ResultGrid from './ResultGrid.svelte';
   import { app, type Result, type TabRuntime } from './state.svelte';
+  import { editsFor } from './gridedits.svelte';
 
   let { rt, results, name }: { rt: TabRuntime; results: Result[]; name: string } = $props();
 
   let grid: ResultGrid | undefined = $state();
 
   const current = $derived(results[rt.activeResult]);
+  const edits = $derived(current?.hasResultSet ? editsFor(current) : null);
+
+  // Ctrl+S inside the results saves edited cells (elsewhere it saves the script).
+  function onkeydown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 's' && edits && edits.count > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      edits.save();
+    }
+  }
 
   // Ticks while a query runs, for the elapsed-time display.
   let now = $state(Date.now());
@@ -51,7 +62,8 @@
   }
 </script>
 
-<section class="results">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<section class="results" {onkeydown}>
   {#if rt.running}
     <div class="state"><span class="spinner"></span> Executing… <span class="elapsed">{elapsed(now - rt.startedAt)}</span></div>
   {:else if rt.error}
@@ -89,8 +101,30 @@
         </div>
       {/if}
     </div>
+    {#if edits && (edits.count > 0 || edits.error)}
+      <div class="editbar" role="region" aria-label="Unsaved changes">
+        <span class="dot"></span>
+        <span class="what">
+          {edits.count} changed cell{edits.count === 1 ? '' : 's'} in {edits.rowCount} row{edits.rowCount === 1 ? '' : 's'}
+          of <code>{current?.editable?.table}</code>
+        </span>
+        {#if edits.error}<span class="saveerr" title={edits.error}>{edits.error}</span>{/if}
+        <span class="spacer"></span>
+        <button class="btn sm" onclick={() => edits?.discard()} disabled={edits.saving}>Discard</button>
+        <button class="btn sm primary" onclick={() => edits?.save()} disabled={edits.saving || edits.count === 0}>
+          {edits.saving ? 'Saving…' : 'Save'} <kbd>Ctrl+S</kbd>
+        </button>
+      </div>
+    {/if}
     <footer class="status">
       <span class={[current?.error && 'errtext']}>{summary()}</span>
+      {#if current?.hasResultSet && !current.error}
+        {#if current.editable}
+          <span class="mode" title="Double-click a cell, or press F2, to edit it">editable</span>
+        {:else if current.readOnly}
+          <span class="mode ro" title={current.readOnly}>read-only</span>
+        {/if}
+      {/if}
       <span class="spacer"></span>
       {#if current?.hasResultSet && !current.error}
         <button class="link" onclick={() => grid?.copyAll()}>Copy as TSV</button>
@@ -107,6 +141,53 @@
     height: 100%;
     min-height: 0;
     background: var(--grid-bg);
+  }
+  .editbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--syn-number) 10%, var(--panel));
+    font-size: 12px;
+  }
+  .editbar .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--syn-number);
+    flex-shrink: 0;
+  }
+  .editbar code {
+    font-family: var(--mono);
+  }
+  .editbar .saveerr {
+    color: var(--danger);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .editbar .spacer {
+    flex: 1;
+  }
+  .editbar kbd {
+    margin-left: 4px;
+    opacity: 0.75;
+    font-size: 10.5px;
+  }
+  .mode {
+    margin-left: 8px;
+    padding: 0 6px;
+    border-radius: 3px;
+    font-size: 10.5px;
+    color: var(--success);
+    background: var(--success-bg);
+    cursor: default;
+  }
+  .mode.ro {
+    color: var(--text-faint);
+    background: var(--hover);
   }
   .content {
     flex: 1;

@@ -271,9 +271,19 @@ func (m *Manager) Run(ctx context.Context, tabID, connID string, statements []st
 		s.mu.Unlock()
 	}()
 
+	m.mu.Lock()
+	driver := ""
+	if p := m.pools[connID]; p != nil {
+		driver = p.cfg.Driver
+	}
+	m.mu.Unlock()
+
 	results := make([]Result, 0, len(statements))
 	for _, stmt := range statements {
 		r := Execute(ctx, s.conn, stmt, maxRows)
+		if r.HasResultSet && r.Error == "" && ctx.Err() == nil {
+			r.Editable, r.ReadOnly = EditInfo(ctx, s.conn, driver, stmt, r.Columns)
+		}
 		results = append(results, r)
 		if ctx.Err() != nil {
 			results[len(results)-1].Error = "Query cancelled"

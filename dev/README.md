@@ -80,3 +80,12 @@ their inner `;`) together.
   select * from does_not_exist;
   select count(*) from orders;
   ```
+
+## Tests against these databases
+
+The grid-editing tests can run against the sample databases (they use their
+own scratch tables and clean up after themselves):
+
+```sh
+go test -tags devdb -run DevDB ./internal/dbx/
+```

@@ -4,6 +4,7 @@ import type { Connection, Tab } from '../../bindings/dbird/internal/store/models
 import type { Result } from '../../bindings/dbird/internal/dbx/models';
 import type { CompletionSetup, PasswordStoreInfo } from '../../bindings/dbird/models';
 import { invalidateCompletionCache } from './monaco';
+import { pendingEdits, setResultConnection } from './gridedits.svelte';
 import { splitStatements, statementAt, unfilteredDelete, type Dialect, type Statement } from './sqlsplit';
 
 export type { Connection, Tab, Result };
@@ -409,9 +410,24 @@ class AppState {
   // Tabs closed since the app started, most recent last (for Ctrl+Shift+T).
   #closed: { tab: Tab; index: number }[] = [];
 
-  closeTab(id: string) {
+  // Asks before throwing away cell edits that weren't saved.
+  async #confirmDiscardEdits(tabId: string): Promise<boolean> {
+    const n = pendingEdits(this.results[tabId]);
+    if (n === 0) return true;
+    return this.ask({
+      title: 'Discard unsaved changes?',
+      message: `${n} edited cell${n === 1 ? '' : 's'} in the results ${n === 1 ? "hasn't" : "haven't"} been saved to the database.`,
+      details: [],
+      confirmLabel: 'Discard changes',
+    });
+  }
+
+  // Closes tab id; false when the user chose to keep unsaved cell edits.
+  async closeTab(id: string): Promise<boolean> {
+    if (!this.tabs.some((t) => t.id === id)) return false;
+    if (!(await this.#confirmDiscardEdits(id))) return false;
     const idx = this.tabs.findIndex((t) => t.id === id);
-    if (idx < 0) return;
+    if (idx < 0) return false;
     const closing = $state.snapshot(this.tabs[idx]) as Tab;
     // Don't remember tabs that were never used.
     if (closing.sql.trim() || closing.filePath) this.#closed.push({ tab: closing, index: idx });
@@ -426,6 +442,7 @@ class AppState {
     }
     if (this.tabs.length === 0) this.newTab('');
     this.scheduleSave();
+    return true;
   }
 
   // Reopens the most recently closed tab, where it was.
@@ -636,6 +653,7 @@ class AppState {
     this.#ensureRt(tab.id);
     const rt = this.runtime[tab.id];
     if (rt.running) return;
+    if (!(await this.#confirmDiscardEdits(tab.id))) return;
     if (!(await this.#confirmDangerous(tab, statements))) return;
     rt.running = true;
     rt.startedAt = Date.now();
@@ -647,6 +665,7 @@ class AppState {
       }
       const results = await QueryService.Run(tab.id, tab.connectionId, statements, this.maxRows, continueOnError);
       const list = (results ?? []).map((r) => (r.error ? { ...r, error: r.error + dialectHint(r.sql, this.dialect(tab.connectionId)) } : r));
+      for (const r of list) setResultConnection(r, tab.connectionId);
       this.results = { ...this.results, [tab.id]: list };
       // Focus the first failing result, else the last result set.
       let active = list.findIndex((r) => r.error);

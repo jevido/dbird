@@ -85,10 +85,8 @@
       app.newTab();
     } else if (key === 'w' && !e.shiftKey) {
       e.preventDefault();
-      if (app.activeTabId) {
-        forgetEditorState(app.activeTabId);
-        app.closeTab(app.activeTabId);
-      }
+      const id = app.activeTabId;
+      if (id) app.closeTab(id).then((closed) => closed && forgetEditorState(id));
     } else if (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp') {
       e.preventDefault();
       app.cycleTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
