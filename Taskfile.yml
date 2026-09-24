@@ -17,53 +17,61 @@ includes:
   linux: ./build/linux/Taskfile.yml
 
 tasks:
+  default:
+    desc: Lists the available tasks (`wails3 task --list-all` shows the platform ones too)
+    silent: true
+    cmds:
+      - 'echo "Usage: wails3 task <name>   (e.g. wails3 task dev)"'
+      - echo
+      - wails3 task --list | grep -E '^\* ' | grep -vE '^\* (common|linux|darwin|windows):' | sed -E 's/^\* ([^ ]+):/  \1 /'
+
   build:
-    summary: Builds the application
+    desc: Builds the application
     cmds:
       - task: "{{.GOOS}}:build"
 
   package:
-    summary: Packages a production build of the application
+    desc: Packages a production build of the application
     cmds:
       - task: "{{.GOOS}}:package"
 
   run:
-    summary: Runs the application
+    desc: Runs the application
     cmds:
       - task: "{{.GOOS}}:run"
 
   dev:
-    summary: Runs the application in development mode
+    desc: Runs the app in development mode with hot reload (start here)
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
 
   setup:docker:
-    summary: Builds Docker image for cross-compilation (~800MB download)
+    desc: Builds Docker image for cross-compilation (~800MB download)
     cmds:
       - task: common:setup:docker
 
   build:server:
-    summary: Builds the application in server mode (no GUI, HTTP server only)
+    desc: Builds the application in server mode (no GUI, HTTP server only)
     cmds:
       - task: common:build:server
 
   run:server:
-    summary: Runs the application in server mode
+    desc: Runs the application in server mode
     cmds:
       - task: common:run:server
 
   build:docker:
-    summary: Builds a Docker image for server mode deployment
+    desc: Builds a Docker image for server mode deployment
     cmds:
       - task: common:build:docker
 
   run:docker:
-    summary: Builds and runs the Docker image
+    desc: Builds and runs the Docker image
     cmds:
       - task: common:run:docker
 
   dev:db:up:
-    summary: Starts sample PostgreSQL and MySQL databases and creates a sample SQLite file (see dev/README.md)
+    desc: Starts sample PostgreSQL and MySQL databases and creates a sample SQLite file (see dev/README.md)
     cmds:
       - '{{.COMPOSE}} -f dev/compose.yaml up -d --wait'
       - task: dev:db:sqlite
@@ -73,7 +81,7 @@ tasks:
         sh: 'if docker info >/dev/null 2>&1; then echo "docker compose"; else echo "podman compose"; fi'
 
   dev:db:sqlite:
-    summary: Creates dev/data/shop.sqlite (recreates it if it exists)
+    desc: Creates dev/data/shop.sqlite (recreates it if it exists)
     cmds:
       - mkdir -p dev/data
       - rm -f dev/data/shop.sqlite
@@ -85,7 +93,7 @@ tasks:
         fi
 
   dev:db:huge:
-    summary: Adds a database "huge" with 300,000 relations to the sample PostgreSQL (takes a few minutes)
+    desc: Adds a database "huge" with 300,000 relations to the sample PostgreSQL (takes a few minutes)
     cmds:
       - '{{.COMPOSE}} -f dev/compose.yaml exec -T postgres psql -q -U dbird -d shop -c "DROP DATABASE IF EXISTS huge" -c "CREATE DATABASE huge"'
       - '{{.COMPOSE}} -f dev/compose.yaml exec -T postgres psql -q -v ON_ERROR_STOP=1 -U dbird -d huge < dev/postgres/huge.sql'
@@ -94,7 +102,7 @@ tasks:
         sh: 'if docker info >/dev/null 2>&1; then echo "docker compose"; else echo "podman compose"; fi'
 
   dev:db:down:
-    summary: Stops the sample databases and deletes their data
+    desc: Stops the sample databases and deletes their data
     cmds:
       - '{{.COMPOSE}} -f dev/compose.yaml down -v'
       - rm -f dev/data/shop.sqlite
