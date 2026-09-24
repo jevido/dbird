@@ -5,6 +5,7 @@
   import ConnectionDialog from './lib/ConnectionDialog.svelte';
   import ConfirmDialog from './lib/ConfirmDialog.svelte';
   import ImportDialog from './lib/ImportDialog.svelte';
+  import PasswordPrompt from './lib/PasswordPrompt.svelte';
   import { forgetEditorState } from './lib/SqlEditor.svelte';
   import { app, errorText } from './lib/state.svelte';
   import { initTheme } from './lib/theme';
@@ -132,6 +133,10 @@
 
 {#if whatsNew.length > 0}
   <WhatsNew entries={whatsNew} onclose={() => (whatsNew = [])} />
+{/if}
+
+{#if app.passwordPrompt}
+  <PasswordPrompt req={app.passwordPrompt} />
 {/if}
 
 {#if app.confirmation}

@@ -82,7 +82,7 @@ func (s *ConnectionService) Import(conns []store.Connection) (int, error) {
 		}
 	}
 	for i, c := range conns {
-		if _, err := s.store.SaveConnection(c); err != nil {
+		if _, err := s.save(c); err != nil {
 			return i, err
 		}
 	}

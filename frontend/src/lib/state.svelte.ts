@@ -2,7 +2,7 @@ import { Events } from '@wailsio/runtime';
 import { ConnectionService, FileService, QueryService, WorkspaceService } from '../../bindings/dbird';
 import type { Connection, Tab } from '../../bindings/dbird/internal/store/models';
 import type { Result } from '../../bindings/dbird/internal/dbx/models';
-import type { CompletionSetup } from '../../bindings/dbird/models';
+import type { CompletionSetup, PasswordStoreInfo } from '../../bindings/dbird/models';
 import { invalidateCompletionCache } from './monaco';
 import { splitStatements, statementAt, unfilteredDelete, type Dialect, type Statement } from './sqlsplit';
 
@@ -27,6 +27,15 @@ export interface ConfirmRequest {
   tone?: 'danger' | 'normal';
   resolve: (ok: boolean) => void;
 }
+
+export interface PasswordRequest {
+  conn: Connection;
+  resolve: (answer: { password: string; remember: boolean } | null) => void;
+}
+
+// ConnectionService.Connect fails with this message when it needs a password
+// dbird doesn't have (no password store, or it was locked).
+const PASSWORD_REQUIRED = 'password required';
 
 export interface Toast {
   id: number;
@@ -71,7 +80,6 @@ export function emptyConnection(): Connection {
     host: 'localhost',
     port: 5432,
     user: '',
-    password: '',
     database: '',
     sslMode: 'prefer',
     url: '',
@@ -101,6 +109,11 @@ class AppState {
   // Pending confirmation dialog, if any.
   confirmation = $state<ConfirmRequest | null>(null);
 
+  // Where connection passwords are kept (see ConnectionService.PasswordStore).
+  passwordStore = $state<PasswordStoreInfo>({ available: true, name: 'your keyring', plaintextLeft: 0 });
+  // Pending password prompt, if any.
+  passwordPrompt = $state<PasswordRequest | null>(null);
+
   // Connection dialog: null = closed.
   editing = $state<Connection | null>(null);
 
@@ -121,11 +134,22 @@ class AppState {
     } catch {
       /* storage unavailable */
     }
-    const [conns, ws, connected] = await Promise.all([
+    const [conns, ws, connected, pwStore] = await Promise.all([
       ConnectionService.List(),
       WorkspaceService.Load(),
       ConnectionService.Connected(),
+      ConnectionService.PasswordStore(),
     ]);
+    this.passwordStore = pwStore;
+    if (pwStore.plaintextLeft > 0) {
+      const n = pwStore.plaintextLeft;
+      this.toast(
+        `${n} saved password${n === 1 ? ' is' : 's are'} still stored unencrypted, because no password store is available. ` +
+          'Set up a password store (GNOME Keyring, KWallet or KeePassXC) and restart dbird to encrypt them.',
+        'error',
+        20000,
+      );
+    }
     this.connections = conns ?? [];
     this.connected = Object.fromEntries((connected ?? []).map((id) => [id, true]));
     const known = new Set(this.connections.map((c) => c.id));
@@ -224,10 +248,10 @@ class AppState {
     this.scheduleSave();
   }
 
-  toast(text: string, kind: Toast['kind'] = 'info') {
+  toast(text: string, kind: Toast['kind'] = 'info', ms = kind === 'error' ? 6000 : 3000) {
     const id = ++this.#toastSeq;
     this.toasts.push({ id, kind, text });
-    setTimeout(() => (this.toasts = this.toasts.filter((t) => t.id !== id)), kind === 'error' ? 6000 : 3000);
+    setTimeout(() => (this.toasts = this.toasts.filter((t) => t.id !== id)), ms);
   }
 
   connection(id: string): Connection | undefined {
@@ -303,7 +327,26 @@ class AppState {
   async #connect(id: string): Promise<boolean> {
     this.connecting[id] = true;
     try {
-      await ConnectionService.Connect(id);
+      try {
+        await ConnectionService.Connect(id);
+      } catch (e) {
+        const conn = this.connection(id);
+        if (errorText(e) !== PASSWORD_REQUIRED || !conn) throw e;
+        const answer = await this.askPassword(conn);
+        if (!answer) return false;
+        // Only remember the password once it has worked.
+        await ConnectionService.ProvidePassword(id, answer.password, false);
+        try {
+          await ConnectionService.Connect(id);
+        } catch (e2) {
+          await ConnectionService.ForgetSessionPassword(id);
+          throw e2;
+        }
+        if (answer.remember) {
+          await ConnectionService.ProvidePassword(id, answer.password, true);
+          await this.reloadConnections();
+        }
+      }
       this.connected[id] = true;
       this.loadCompletions(id);
       return true;
@@ -538,6 +581,21 @@ class AppState {
       script,
     );
     return stmts;
+  }
+
+  // Asks for the password of conn; null when cancelled.
+  askPassword(conn: Connection): Promise<{ password: string; remember: boolean } | null> {
+    this.passwordPrompt?.resolve(null);
+    ConnectionService.PasswordStore().then((s) => (this.passwordStore = s));
+    return new Promise((resolve) => {
+      this.passwordPrompt = {
+        conn,
+        resolve: (answer) => {
+          this.passwordPrompt = null;
+          resolve(answer);
+        },
+      };
+    });
   }
 
   ask(req: Omit<ConfirmRequest, 'resolve'>): Promise<boolean> {

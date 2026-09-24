@@ -11,6 +11,11 @@
   let saving = $state(false);
   let testMsg = $state<{ ok: boolean; text: string } | null>(null);
   let showPassword = $state(false);
+  // A saved password exists (or, without a password store, is asked on connect).
+  const hasSaved = $derived(!!(initial.hasPassword || initial.askPassword));
+  const pwStore = $derived(app.passwordStore);
+  // The password store may have been started since dbird opened.
+  ConnectionService.PasswordStore().then((s) => (app.passwordStore = s));
   // svelte-ignore state_referenced_locally
   let useUrl = $state(!!initial.url);
 
@@ -69,7 +74,9 @@
         app.activeTab.connectionId = saved.id;
         app.scheduleSave();
       }
-      app.toast(`Saved “${saved.name}”`);
+      if (saved.askPassword && !saved.hasPassword)
+        app.toast(`Saved “${saved.name}”. No password store is available, so its password will be asked when connecting.`, 'error', 10000);
+      else app.toast(`Saved “${saved.name}”`);
       app.editing = null;
     } catch (err) {
       testMsg = { ok: false, text: errorText(err) };
@@ -91,6 +98,40 @@
     app.editing = null;
   }
 </script>
+
+{#snippet passwordField(full: boolean)}
+  <label class={[full && 'full']}>
+    <span>Password</span>
+    <div class="row">
+      <input
+        type={showPassword ? 'text' : 'password'}
+        bind:value={c.password}
+        disabled={c.clearPassword}
+        placeholder={c.clearPassword
+          ? 'Will be forgotten'
+          : initial.hasPassword
+            ? `Saved in ${pwStore.name}`
+            : initial.askPassword
+              ? 'Asked when connecting'
+              : ''}
+        autocomplete="off"
+      />
+      <button type="button" class="btn sm" onclick={() => (showPassword = !showPassword)}>{showPassword ? 'Hide' : 'Show'}</button>
+    </div>
+    {#if hasSaved && !c.password}
+      <small>
+        {c.clearPassword ? 'The saved password will be forgotten.' : 'Leave empty to keep it.'}
+        <button type="button" class="link" onclick={() => (c.clearPassword = !c.clearPassword)}>{c.clearPassword ? 'Undo' : 'Forget password'}</button>
+      </small>
+    {/if}
+    {#if !pwStore.available}
+      <small class="warn">
+        No password store found, so dbird won't save this password and will ask for it when connecting. Set up a password store (GNOME
+        Keyring, KWallet or KeePassXC) to have it remembered securely.
+      </small>
+    {/if}
+  </label>
+{/snippet}
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && close()} />
 
@@ -137,9 +178,11 @@
               bind:value={c.url}
               required
               autocomplete="off"
-              placeholder={c.driver === 'postgres' ? 'postgres://user:pass@host:5432/db?sslmode=disable' : 'user:pass@tcp(host:3306)/db'}
+              placeholder={c.driver === 'postgres' ? 'postgres://user@host:5432/db?sslmode=disable' : 'user@tcp(host:3306)/db'}
             />
+            <small>A password in the URL is moved to the password field when saving.</small>
           </label>
+          {@render passwordField(true)}
         {:else}
           <label class="host">
             <span>Host</span>
@@ -157,13 +200,7 @@
             <span>User</span>
             <input bind:value={c.user} autocomplete="off" />
           </label>
-          <label>
-            <span>Password</span>
-            <div class="row">
-              <input type={showPassword ? 'text' : 'password'} bind:value={c.password} autocomplete="off" />
-              <button type="button" class="btn sm" onclick={() => (showPassword = !showPassword)}>{showPassword ? 'Hide' : 'Show'}</button>
-            </div>
-          </label>
+          {@render passwordField(false)}
           {#if c.driver === 'postgres'}
             <label>
               <span>SSL mode</span>
@@ -214,7 +251,11 @@
       <button type="button" class="btn" onclick={close}>Cancel</button>
       <button type="submit" class="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
     </footer>
-    <p class="note">Credentials are stored locally in your config directory (file readable only by you).</p>
+    <p class="note">
+      {pwStore.available
+        ? `Passwords are kept in ${pwStore.name}, not in dbird's settings file.`
+        : "Passwords are never written to dbird's settings file."}
+    </p>
   </form>
 </div>
 
@@ -331,6 +372,21 @@
   small {
     color: var(--text-faint);
     font-size: 11px;
+  }
+  small.warn {
+    color: var(--syn-number);
+    line-height: 1.4;
+  }
+  .link {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+  }
+  .link:hover {
+    text-decoration: underline;
   }
   .colors {
     display: flex;

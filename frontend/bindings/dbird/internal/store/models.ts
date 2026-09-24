@@ -15,7 +15,14 @@ export interface Connection {
     "host": string;
     "port": number;
     "user": string;
-    "password": string;
+
+    /**
+     * Password is never written to disk by current versions: it lives in the
+     * OS password store (HasPassword). Older versions saved it here, and it
+     * is moved out on startup. Towards the frontend it is only used to send
+     * a newly typed password.
+     */
+    "password"?: string;
 
     /**
      * database name, or file path for sqlite
@@ -38,6 +45,25 @@ export interface Connection {
      * names: "" (automatic), "preload", "lookup" or "off".
      */
     "completion": string;
+
+    /**
+     * HasPassword means the password is kept in the OS password store.
+     */
+    "hasPassword"?: boolean;
+
+    /**
+     * AskPassword means there was no password store when the password was
+     * set, so dbird asks for it on connect instead of saving it.
+     */
+    "askPassword"?: boolean;
+
+    /**
+     * ClearPassword and CopyFrom are only sent by the frontend when saving:
+     * forget the saved password, or copy the one of connection CopyFrom
+     * (for duplicates). They are never stored.
+     */
+    "clearPassword"?: boolean;
+    "copyFrom"?: string;
 }
 
 /**

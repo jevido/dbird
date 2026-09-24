@@ -15,13 +15,17 @@ import (
 
 // Connection is a saved database connection.
 type Connection struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Driver   string `json:"driver"` // postgres, mysql, sqlite
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Driver string `json:"driver"` // postgres, mysql, sqlite
+	Host   string `json:"host"`
+	Port   int    `json:"port"`
+	User   string `json:"user"`
+	// Password is never written to disk by current versions: it lives in the
+	// OS password store (HasPassword). Older versions saved it here, and it
+	// is moved out on startup. Towards the frontend it is only used to send
+	// a newly typed password.
+	Password string `json:"password,omitempty"`
 	Database string `json:"database"` // database name, or file path for sqlite
 	SSLMode  string `json:"sslMode"`  // postgres only
 	// URL, when set, is used verbatim as the DSN and overrides the fields above.
@@ -30,6 +34,18 @@ type Connection struct {
 	// Completion selects how editor autocompletion gets table and column
 	// names: "" (automatic), "preload", "lookup" or "off".
 	Completion string `json:"completion"`
+
+	// HasPassword means the password is kept in the OS password store.
+	HasPassword bool `json:"hasPassword,omitempty"`
+	// AskPassword means there was no password store when the password was
+	// set, so dbird asks for it on connect instead of saving it.
+	AskPassword bool `json:"askPassword,omitempty"`
+
+	// ClearPassword and CopyFrom are only sent by the frontend when saving:
+	// forget the saved password, or copy the one of connection CopyFrom
+	// (for duplicates). They are never stored.
+	ClearPassword bool   `json:"clearPassword,omitempty"`
+	CopyFrom      string `json:"copyFrom,omitempty"`
 }
 
 // Tab is an open SQL editor tab.

@@ -200,7 +200,7 @@
       { label: 'Refresh', action: () => refresh(c), disabled: !on },
       'sep',
       { label: 'Edit connection…', action: () => (app.editing = { ...c }) },
-      { label: 'Duplicate', action: () => (app.editing = { ...c, id: '', name: c.name + ' copy' }) },
+      { label: 'Duplicate', action: () => (app.editing = { ...c, id: '', name: c.name + ' copy', copyFrom: c.id }) },
       { label: 'Delete…', danger: true, action: () => askDelete(c) },
     ]);
   }

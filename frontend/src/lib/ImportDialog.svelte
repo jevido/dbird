@@ -73,6 +73,7 @@
   }
 
   scan('');
+  ConnectionService.PasswordStore().then((s) => (app.passwordStore = s));
 
   const driverLabel: Record<string, string> = { postgres: 'PG', mysql: 'My', sqlite: 'SL' };
 </script>
@@ -128,7 +129,14 @@
     {#if error}<p class="error">{error}</p>{/if}
 
     <footer>
-      <small>Passwords are stored in dbird's settings file like any other connection.</small>
+      {#if app.passwordStore.available}
+        <small>Passwords are kept in {app.passwordStore.name}, not in dbird's settings file.</small>
+      {:else}
+        <small class="warn">
+          No password store is available, so passwords aren't saved and will be asked when connecting. Set up a password store (GNOME
+          Keyring, KWallet or KeePassXC) to keep them.
+        </small>
+      {/if}
       <button class="btn" onclick={close}>Cancel</button>
       <button class="btn primary" onclick={doImport} disabled={count === 0 || importing}>
         {importing ? 'Importing…' : `Import ${count || ''}`.trim()}
@@ -288,5 +296,8 @@
   footer small {
     flex: 1;
     color: var(--text-faint);
+  }
+  footer small.warn {
+    color: var(--syn-number);
   }
 </style>

@@ -23,6 +23,7 @@ export type {
     DBeaverScan,
     OmarchyTheme,
     OpenedFile,
+    PasswordStoreInfo,
     TablePage,
     UpdateStatus
 } from "./models.js";

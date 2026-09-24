@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"dbird/internal/secret"
 	"dbird/internal/store"
 )
 
@@ -35,7 +36,7 @@ func TestImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &ConnectionService{store: st}
+	s := &ConnectionService{store: st, pw: newPasswords(&secret.Memory{})}
 
 	bad := []store.Connection{
 		{Name: "ok", Driver: "postgres"},

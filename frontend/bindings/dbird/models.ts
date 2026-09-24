@@ -57,6 +57,28 @@ export interface OpenedFile {
 }
 
 /**
+ * PasswordStoreInfo describes where connection passwords are kept.
+ */
+export interface PasswordStoreInfo {
+    /**
+     * Available is false when there is no usable password store; passwords
+     * are then asked for on connect.
+     */
+    "available": boolean;
+
+    /**
+     * Name is how the password store is called on this OS.
+     */
+    "name": string;
+
+    /**
+     * PlaintextLeft counts connections whose password older versions saved
+     * in the settings file and that couldn't be moved to the password store.
+     */
+    "plaintextLeft": number;
+}
+
+/**
  * TablePage is one page of the sidebar's table list.
  */
 export interface TablePage {

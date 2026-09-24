@@ -15,7 +15,8 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
 - **Connections**: PostgreSQL, MySQL/MariaDB and SQLite. Host/port form or a raw
   connection URL/DSN, test button, color tag, duplicate/edit/delete.
   **Import from DBeaver** brings over saved PostgreSQL, MySQL and SQLite
-  connections, including their saved passwords; SSH tunnels aren't supported.
+  connections, including their saved passwords (into the OS password store);
+  SSH tunnels aren't supported.
 - **Database tree**: schemas → tables/views → columns (with PK and types),
   lazy-loaded. Double-click a table to open its data. Filter box matches
   connection and table names. Right-click for more actions.
@@ -155,8 +156,14 @@ the files in the repository keep `0.0.1` as a placeholder. Running the workflow 
   (`magick assets/logo.png -resize 1024x1024 PNG32:build/appicon.png`), then
   `wails3 task common:generate:icons` makes the `.icns`/`.ico`.
 
-Settings live in `~/.config/dbird/dbird.json` (or the OS equivalent). Saved
-passwords are stored there in plain text; the file is created with mode 0600.
+Settings live in `~/.config/dbird/dbird.json` (or the OS equivalent).
+Passwords are never written there: they are kept in the OS password store (the
+Secret Service, e.g. GNOME Keyring, KWallet or KeePassXC, on Linux; the Keychain
+on macOS; Credential Manager on Windows). A password typed into a connection URL
+is split off into the password store too. Without a password store dbird asks
+for passwords when connecting and keeps them in memory until it quits. Passwords
+saved in plain text by versions before 0.3 are moved to the password store on
+startup.
 
 ## License
 

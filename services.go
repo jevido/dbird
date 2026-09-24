@@ -16,6 +16,7 @@ import (
 type ConnectionService struct {
 	store *store.Store
 	dbm   *dbx.Manager
+	pw    *passwords
 }
 
 func validate(c store.Connection) error {
@@ -44,45 +45,122 @@ func (s *ConnectionService) ServiceShutdown() error {
 	return nil
 }
 
-// List returns all saved connections.
+// List returns all saved connections, without passwords.
 func (s *ConnectionService) List() []store.Connection {
-	return s.store.Connections()
+	conns := s.store.Connections()
+	for i := range conns {
+		conns[i] = clean(conns[i])
+	}
+	return conns
 }
 
-// Save creates or updates a connection. An open pool for it is closed so the
-// new settings take effect on the next connect.
+// Save creates or updates a connection. Its password goes to the OS password
+// store (see passwords). An open pool for it is closed so the new settings
+// take effect on the next connect.
 func (s *ConnectionService) Save(c store.Connection) (store.Connection, error) {
 	c.Name = strings.TrimSpace(c.Name)
 	if err := validate(c); err != nil {
 		return store.Connection{}, err
 	}
+	return s.save(c)
+}
+
+// save stores a validated connection. A password is taken from c.Password or
+// from c.URL; an empty one keeps the saved password unless c.ClearPassword is
+// set, and a duplicate (c.CopyFrom) gets the password of its original.
+func (s *ConnectionService) save(c store.Connection) (store.Connection, error) {
+	var old store.Connection
+	existed := false
 	if c.ID != "" {
-		if old, ok := s.store.Connection(c.ID); ok && old != c {
+		old, existed = s.store.Connection(c.ID)
+	} else {
+		c.ID = store.NewID()
+	}
+	pw, clear, copyFrom := c.Password, c.ClearPassword, c.CopyFrom
+	c.Password, c.ClearPassword, c.CopyFrom = "", false, ""
+	if c.URL != "" {
+		var inURL string
+		c.URL, inURL = dbx.SplitPassword(c.Driver, c.URL)
+		if pw == "" {
+			pw = inURL
+		}
+	}
+
+	hadPassword := existed && (old.HasPassword || old.AskPassword || legacyPassword(old) != "")
+	switch {
+	case clear || c.Driver == dbx.SQLite:
+		pw = ""
+		if hadPassword {
+			s.pw.forget(c.ID)
+		}
+		c.HasPassword, c.AskPassword = false, false
+	case pw != "":
+	case copyFrom != "":
+		if src, ok := s.store.Connection(copyFrom); ok {
+			pw, _ = s.pw.lookup(src)
+		}
+	case existed:
+		c.HasPassword, c.AskPassword = old.HasPassword, old.AskPassword
+		pw = legacyPassword(old) // still in the settings file: move it now
+	}
+
+	changed := false
+	if pw != "" {
+		if existed {
+			cur, ok := s.pw.lookup(old)
+			changed = !ok || cur != pw
+		}
+		s.pw.store(&c, pw)
+	}
+	if existed {
+		o := clean(old)
+		o.HasPassword, o.AskPassword = c.HasPassword, c.AskPassword
+		if changed || clear || o != c {
 			s.dbm.Disconnect(c.ID)
 		}
 	}
 	return s.store.SaveConnection(c)
 }
 
-// Delete removes a saved connection and closes it if open.
+// Delete removes a saved connection and its password, and closes it if open.
 func (s *ConnectionService) Delete(id string) error {
 	s.dbm.Disconnect(id)
+	if c, ok := s.store.Connection(id); ok && (c.HasPassword || c.AskPassword) {
+		s.pw.forget(id)
+	}
 	return s.store.DeleteConnection(id)
 }
 
-// Test tries to connect with c and returns the server version.
+// Test tries to connect with c and returns the server version. Without a
+// typed password it uses the saved one of c (or of the connection c is a
+// duplicate of).
 func (s *ConnectionService) Test(ctx context.Context, c store.Connection) (string, error) {
 	if err := validate(c); err != nil {
 		return "", err
 	}
+	_, inURL := dbx.SplitPassword(c.Driver, c.URL)
+	if c.Password == "" && inURL == "" && !c.ClearPassword {
+		src := c.ID
+		if src == "" {
+			src = c.CopyFrom
+		}
+		if saved, ok := s.store.Connection(src); ok {
+			c.Password, _ = s.pw.lookup(saved)
+		}
+	}
 	return dbx.Test(ctx, c)
 }
 
-// Connect opens the saved connection id.
+// Connect opens the saved connection id. It fails with errPasswordRequired
+// when the password has to be asked for (see ProvidePassword).
 func (s *ConnectionService) Connect(ctx context.Context, id string) error {
 	c, ok := s.store.Connection(id)
 	if !ok {
 		return errors.New("unknown connection")
+	}
+	c, err := s.pw.resolve(c)
+	if err != nil {
+		return err
 	}
 	return s.dbm.Connect(ctx, c)
 }
@@ -104,6 +182,10 @@ func (s *ConnectionService) ensure(ctx context.Context, id string) error {
 	c, ok := s.store.Connection(id)
 	if !ok {
 		return errors.New("unknown connection")
+	}
+	c, err := s.pw.resolve(c)
+	if err != nil {
+		return err
 	}
 	return s.dbm.Ensure(ctx, c)
 }

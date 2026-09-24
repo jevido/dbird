@@ -46,7 +46,8 @@ export function Completion(id: string): $CancellablePromise<$models.CompletionSe
 }
 
 /**
- * Connect opens the saved connection id.
+ * Connect opens the saved connection id. It fails with errPasswordRequired
+ * when the password has to be asked for (see ProvidePassword).
  */
 export function Connect(id: string): $CancellablePromise<void> {
     return $Call.ByID(3034779341, id);
@@ -67,7 +68,7 @@ export function DefaultSchema(id: string): $CancellablePromise<string> {
 }
 
 /**
- * Delete removes a saved connection and closes it if open.
+ * Delete removes a saved connection and its password, and closes it if open.
  */
 export function Delete(id: string): $CancellablePromise<void> {
     return $Call.ByID(1192434110, id);
@@ -81,6 +82,14 @@ export function Disconnect(id: string): $CancellablePromise<void> {
 }
 
 /**
+ * ForgetSessionPassword drops a password given with ProvidePassword that
+ * turned out to be wrong, so the next connect asks again.
+ */
+export function ForgetSessionPassword(id: string): $CancellablePromise<void> {
+    return $Call.ByID(2405945301, id);
+}
+
+/**
  * Import saves conns as new connections. Nothing is saved unless all of them
  * are valid.
  */
@@ -89,10 +98,17 @@ export function Import(conns: store$0.Connection[] | null): $CancellablePromise<
 }
 
 /**
- * List returns all saved connections.
+ * List returns all saved connections, without passwords.
  */
 export function List(): $CancellablePromise<store$0.Connection[] | null> {
     return $Call.ByID(4115594309);
+}
+
+/**
+ * PasswordStore reports whether the OS password store can be used.
+ */
+export function PasswordStore(): $CancellablePromise<$models.PasswordStoreInfo> {
+    return $Call.ByID(909666965);
 }
 
 /**
@@ -111,8 +127,18 @@ export function PickSQLiteFile(): $CancellablePromise<string> {
 }
 
 /**
- * Save creates or updates a connection. An open pool for it is closed so the
- * new settings take effect on the next connect.
+ * ProvidePassword sets the password of connection id after it was asked for
+ * on connect. With remember it is saved in the password store; otherwise, or
+ * without a password store, it is kept until dbird quits.
+ */
+export function ProvidePassword(id: string, password: string, remember: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4120939103, id, password, remember);
+}
+
+/**
+ * Save creates or updates a connection. Its password goes to the OS password
+ * store (see passwords). An open pool for it is closed so the new settings
+ * take effect on the next connect.
  */
 export function Save(c: store$0.Connection): $CancellablePromise<store$0.Connection> {
     return $Call.ByID(3893059340, c);
@@ -158,7 +184,9 @@ export function TablesPage(id: string, schema: string, filter: string, after: st
 }
 
 /**
- * Test tries to connect with c and returns the server version.
+ * Test tries to connect with c and returns the server version. Without a
+ * typed password it uses the saved one of c (or of the connection c is a
+ * duplicate of).
  */
 export function Test(c: store$0.Connection): $CancellablePromise<string> {
     return $Call.ByID(960763793, c);

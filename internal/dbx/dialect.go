@@ -50,6 +50,9 @@ func dialectFor(driver string) (dialect, error) {
 // DSN builds the driver-specific data source name for c.
 func DSN(c store.Connection) (string, error) {
 	if c.URL != "" {
+		if c.Password != "" {
+			return withPassword(c.Driver, c.URL, c.Password), nil
+		}
 		return c.URL, nil
 	}
 	switch c.Driver {

@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"dbird/internal/dbx"
+	"dbird/internal/secret"
 	"dbird/internal/store"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -26,7 +27,8 @@ func main() {
 		log.Fatal(err)
 	}
 	dbm := dbx.NewManager()
-	conns := &ConnectionService{store: st, dbm: dbm}
+	conns := &ConnectionService{store: st, dbm: dbm, pw: newPasswords(secret.System())}
+	conns.migratePasswords()
 
 	app := application.New(application.Options{
 		Name:        "dbird",
