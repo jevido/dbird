@@ -419,11 +419,15 @@ func (s *QueryService) PreviewEdits(ctx context.Context, connID string, req dbx.
 // Browse runs stmt, a SELECT from one table, rewritten with a filter, sort
 // order and page (see dbx.BrowseSQL) on the session of tabID.
 func (s *QueryService) Browse(ctx context.Context, tabID, connID, stmt string, opt dbx.BrowseOptions, maxRows int) (dbx.Result, error) {
-	_, driver, err := s.pool(ctx, connID)
+	db, driver, err := s.pool(ctx, connID)
 	if err != nil {
 		return dbx.Result{}, err
 	}
-	q, err := dbx.BrowseSQL(stmt, driver, opt)
+	var cols []dbx.FilterColumn
+	if opt.Filter != "" {
+		cols = dbx.FilterColumns(ctx, db, driver, stmt)
+	}
+	q, err := dbx.BrowseSQL(stmt, driver, opt, cols)
 	if err != nil {
 		return dbx.Result{}, err
 	}

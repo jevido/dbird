@@ -703,10 +703,11 @@ class AppState {
   // ---- browsing results: server-side filter, sort and paging ----
 
   // Runs the query behind result again with another filter or sort order,
-  // replacing it. A failing filter keeps the old result and says why.
-  async browse(tab: Tab, result: Result, patch: Partial<Pick<BrowseState, 'filter' | 'orderBy' | 'desc'>>) {
+  // replacing it. A failing query keeps the old result; the error is
+  // returned ('' on success).
+  async browse(tab: Tab, result: Result, patch: Partial<Pick<BrowseState, 'filter' | 'orderBy' | 'desc'>>): Promise<string> {
     const rt = this.runtime[tab.id];
-    if (!rt || rt.running) return;
+    if (!rt || rt.running) return '';
     const edits = editsFor(result);
     if (edits.count > 0) {
       const ok = await this.ask({
@@ -715,7 +716,7 @@ class AppState {
         details: [],
         confirmLabel: 'Discard changes',
       });
-      if (!ok) return;
+      if (!ok) return '';
     }
     const connId = resultConnection(result) || tab.connectionId;
     const next: BrowseState = { ...browseState(result), ...patch, exhausted: false };
@@ -729,10 +730,7 @@ class AppState {
         { filter: next.filter, orderBy: next.orderBy, desc: next.desc, limit: 0, offset: 0 },
         this.maxRows,
       );
-      if (r.error) {
-        this.toast(r.error, 'error');
-        return;
-      }
+      if (r.error) return r.error;
       setResultConnection(r, connId);
       setBrowseState(r, next);
       const list = [...(this.results[tab.id] ?? [])];
@@ -740,8 +738,9 @@ class AppState {
       if (i >= 0) list[i] = r;
       else list.push(r);
       this.results = { ...this.results, [tab.id]: list };
+      return '';
     } catch (e) {
-      this.toast(errorText(e), 'error');
+      return errorText(e);
     } finally {
       rt.running = false;
     }

@@ -434,8 +434,10 @@ func browsable(stmt, driver string) *Browsable {
 	return &Browsable{Limit: sel.limitN}
 }
 
-// BrowseSQL rewrites a simple SELECT (see parseSimpleSelect) with opt.
-func BrowseSQL(stmt, driver string, opt BrowseOptions) (string, error) {
+// BrowseSQL rewrites a simple SELECT (see parseSimpleSelect) with opt. The
+// table's columns, when known, make the filter forgiving about case and
+// quotes on PostgreSQL (see normalizeFilter).
+func BrowseSQL(stmt, driver string, opt BrowseOptions, columns []FilterColumn) (string, error) {
 	sel, reason := parseSimpleSelect(stmt, driver)
 	if sel == nil {
 		return "", fmt.Errorf("can't filter or sort this query: %s", reason)
@@ -443,6 +445,7 @@ func BrowseSQL(stmt, driver string, opt BrowseOptions) (string, error) {
 	var b strings.Builder
 	b.WriteString(sel.head)
 	filter := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(opt.Filter), ";"))
+	filter = normalizeFilter(filter, driver, columns)
 	switch {
 	case sel.where != "" && filter != "":
 		fmt.Fprintf(&b, "\nWHERE (%s) AND (%s)", sel.where, filter)

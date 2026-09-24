@@ -64,7 +64,7 @@ func TestBrowseSQL(t *testing.T) {
 			"select * from account\nWHERE (x in (select 1)) AND (id = 1)\nORDER BY id\nFOR update"},
 	}
 	for _, c := range cases {
-		got, err := BrowseSQL(c.in, Postgres, c.opt)
+		got, err := BrowseSQL(c.in, Postgres, c.opt, nil)
 		if err != nil || got != c.want {
 			t.Errorf("BrowseSQL(%q, %+v) =\n%s\n(%v), want\n%s", c.in, c.opt, got, err, c.want)
 		}
@@ -72,7 +72,7 @@ func TestBrowseSQL(t *testing.T) {
 	if b := browsable("select * from account limit 200", Postgres); b == nil || b.Limit != 200 {
 		t.Errorf("browsable = %+v", b)
 	}
-	if _, err := BrowseSQL("select * from a join b on true", Postgres, BrowseOptions{}); err == nil {
+	if _, err := BrowseSQL("select * from a join b on true", Postgres, BrowseOptions{}, nil); err == nil {
 		t.Error("BrowseSQL accepted a join")
 	}
 }
@@ -267,6 +267,31 @@ func TestReferencedValuesSQLite(t *testing.T) {
 	}
 	if got, _ := ReferencedValues(context.Background(), db, driver, ColumnRef{Schema: "main", Table: "team", Column: "code"}, "al_"); strings.Join(got, ",") != "al_x" {
 		t.Errorf("LIKE wildcards not escaped: %v", got)
+	}
+}
+
+func TestNormalizeFilter(t *testing.T) {
+	cols := []FilterColumn{{Name: "id"}, {Name: "accountId"}, {Name: "name"}, {Name: "Status"}, {Name: "status2"}, {Name: "active", Bool: true}}
+	cases := map[string]string{
+		`accountId = "jeff"`:                  `"accountId" = 'jeff'`,
+		`ACCOUNTID = 'jeff' and name = "x"`:   `"accountId" = 'jeff' and name = 'x'`,
+		`1=false`:                             `true=false`,
+		`true <> 0`:                           `true <> false`,
+		`id = 1`:                              `id = 1`,
+		`"accountId" = 'it''s'`:               `"accountId" = 'it''s'`,
+		`"accountid" is null`:                 `"accountId" is null`,
+		`status = 'open'`:                     `"Status" = 'open'`,
+		`lower(name) = "ann"`:                 `lower(name) = 'ann'`,
+		`a."accountId" = 1 and a.status2 > 0`: `a."accountId" = 1 and a.status2 > 0`,
+		`id in (1, 2) -- note`:                `id in (1, 2) -- note`,
+	}
+	for in, want := range cases {
+		if got := normalizeFilter(in, Postgres, cols); got != want {
+			t.Errorf("normalizeFilter(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if got := normalizeFilter(`accountId = "jeff"`, MySQL, cols); got != `accountId = "jeff"` {
+		t.Errorf("mysql filter changed: %q", got)
 	}
 }
 

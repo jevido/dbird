@@ -14,9 +14,16 @@
   // Filter and sort of a result that runs on the server.
   const browse = $derived(current?.browse ? browseState(current) : null);
   let filterText = $state('');
+  // Why the last filter or sort failed; the previous rows stay visible.
+  let browseError = $state('');
   $effect.pre(() => {
     filterText = browse?.filter ?? '';
   });
+
+  async function rerun(patch: Parameters<typeof app.browse>[2]) {
+    if (!current) return;
+    browseError = await app.browse(tab, current, patch);
+  }
   const serverSort = $derived(browse && browse.orderBy > 0 ? { col: browse.orderBy, desc: browse.desc } : null);
   const canLoadMore = $derived.by(() => {
     if (!current?.browse || !edits || !browse) return false;
@@ -27,17 +34,17 @@
   });
 
   function applyFilter() {
-    if (!current || filterText.trim() === (browse?.filter ?? '')) return;
-    app.browse(tab, current, { filter: filterText.trim() });
+    if (!current || (filterText.trim() === (browse?.filter ?? '') && !browseError)) return;
+    rerun({ filter: filterText.trim() });
   }
 
   // Header click: ascending, descending, then back to the query's own order.
   function sortOn(col: number) {
     if (!current || !browse) return;
     const c = col + 1;
-    if (browse.orderBy !== c) app.browse(tab, current, { orderBy: c, desc: false });
-    else if (!browse.desc) app.browse(tab, current, { orderBy: c, desc: true });
-    else app.browse(tab, current, { orderBy: 0, desc: false });
+    if (browse.orderBy !== c) rerun({ orderBy: c, desc: false });
+    else if (!browse.desc) rerun({ orderBy: c, desc: true });
+    else rerun({ orderBy: 0, desc: false });
   }
 
   async function loadMore() {
@@ -158,20 +165,28 @@
             <span class="where">WHERE</span>
             <input
               bind:value={filterText}
-              placeholder="Filter rows, e.g. name LIKE 'A%' — press Enter"
+              placeholder="Filter rows with SQL, e.g. name LIKE 'A%' or accountId = &quot;jeff&quot; — press Enter"
               spellcheck="false"
+              class={[browseError && 'bad']}
+              oninput={() => (browseError = '')}
               onkeydown={(e) => {
                 if (e.key === 'Escape' && filterText) {
                   e.stopPropagation();
                   filterText = '';
-                  if (browse?.filter) app.browse(tab, current, { filter: '' });
+                  browseError = '';
+                  if (browse?.filter) rerun({ filter: '' });
                 }
               }}
             />
-            {#if browse?.filter}
-              <button type="button" class="link" onclick={() => ((filterText = ''), app.browse(tab, current, { filter: '' }))}>Clear</button>
+            {#if browse?.filter || filterText}
+              <button type="button" class="link" onclick={() => ((filterText = ''), (browseError = ''), browse?.filter && rerun({ filter: '' }))}
+                >Clear</button
+              >
             {/if}
           </form>
+          {#if browseError}
+            <div class="filtererr" role="alert">{browseError}</div>
+          {/if}
         {/if}
         <div class="gridwrap">
           <ResultGrid bind:this={grid} result={current} {serverSort} onsort={current.browse ? sortOn : undefined} />
@@ -298,6 +313,18 @@
   .filterbar input:focus {
     outline: none;
     border-color: var(--accent);
+  }
+  .filterbar input.bad {
+    border-color: var(--danger);
+  }
+  .filtererr {
+    padding: 4px 10px 5px 62px;
+    border-bottom: 1px solid var(--border);
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    white-space: pre-wrap;
   }
   .content:has(.filterbar) {
     display: flex;

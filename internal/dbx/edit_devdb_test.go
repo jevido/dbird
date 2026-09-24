@@ -207,9 +207,39 @@ func TestDevDBPostgres(t *testing.T) {
 	if err != nil || strings.Join(vals, ",") != "1" {
 		t.Errorf("ReferencedValues = %v, %v", vals, err)
 	}
-	q, _ := BrowseSQL(`select * from team limit 10`, driver, BrowseOptions{Filter: "name = 'red'", OrderBy: 1, Desc: true})
+	q, _ := BrowseSQL(`select * from team limit 10`, driver, BrowseOptions{Filter: "name = 'red'", OrderBy: 1, Desc: true}, nil)
 	if r := d.run(q)[0]; len(r.Rows) != 1 || r.Editable == nil {
 		t.Errorf("browse query %q: %d rows, editable %v", q, len(r.Rows), r.Editable != nil)
+	}
+}
+
+func TestDevDBPostgresFilter(t *testing.T) {
+	d := openDevDB(t, store.Connection{ID: "pg", Driver: Postgres, Host: "127.0.0.1", Port: 54320,
+		User: "dbird", Password: "dbird", Database: "shop", SSLMode: "disable"})
+	d.run(`drop table if exists dbird_account cascade`,
+		`create table dbird_account (id serial primary key, "accountId" text, active boolean)`,
+		`insert into dbird_account ("accountId", active) values ('jeff', true), ('ann', false), ('jeff', false)`,
+		`create view dbird_account_v as select * from dbird_account`)
+	t.Cleanup(func() { d.run(`drop table dbird_account cascade`) })
+	db, driver, _ := d.m.DB(d.id)
+	for _, base := range []string{`SELECT * FROM dbird_account`, `SELECT * FROM dbird_account_v`} {
+		cols := FilterColumns(context.Background(), db, driver, base)
+		for filter, want := range map[string]int{
+			`accountId = "jeff"`:                 2,
+			`1=false`:                            0,
+			`1=true`:                             3,
+			`accountid = 'ann' or active = true`: 2,
+			`active = 1`:                         1,
+		} {
+			q, err := BrowseSQL(base, driver, BrowseOptions{Filter: filter}, cols)
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, _ := d.m.Run(context.Background(), "tab", d.id, []string{q}, 100, false)
+			if r := res[0]; r.Error != "" || len(r.Rows) != want {
+				t.Errorf("%s WHERE %s: %d rows, error %q (sql %q)", base, filter, len(r.Rows), r.Error, q)
+			}
+		}
 	}
 }
 
