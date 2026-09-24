@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/logo.svg" width="128" alt="dbird logo"></p>
+<p align="center"><img src="assets/logo.png" width="128" alt="dbird logo"></p>
 
 # dbird
 
@@ -148,8 +148,9 @@ the files in the repository keep `0.0.1` as a placeholder. Running the workflow 
 - `internal/dbx`: drivers, DSNs, query execution, per-tab sessions, metadata queries.
 - `internal/store`: JSON persistence of connections and open tabs.
 - `frontend/src`: Svelte 5 UI (`lib/state.svelte.ts` holds app state).
-- `assets/logo.svg`: the logo. `build/appicon.png` is rendered from it
-  (`rsvg-convert -w 1024 -h 1024 assets/logo.svg -o build/appicon.png`), then
+- `assets/logo.png`: the logo (copied to `frontend/src/assets/logo.png` for the UI).
+  `build/appicon.png` is resized from it
+  (`magick assets/logo.png -resize 1024x1024 PNG32:build/appicon.png`), then
   `wails3 task common:generate:icons` makes the `.icns`/`.ico`.
 
 Settings live in `~/.config/dbird/dbird.json` (or the OS equivalent). Saved

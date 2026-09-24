@@ -4,7 +4,7 @@
   import { app, emptyConnection, errorText, type Connection } from './state.svelte';
   import { quoteIdent } from './sqlutil';
   import UpdateBar from './UpdateBar.svelte';
-  import logo from '../assets/logo.svg';
+  import logo from '../assets/logo.png';
 
   type NodeState = { loading?: boolean; error?: string };
 

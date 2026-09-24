@@ -2,7 +2,7 @@
   import { Browser } from '@wailsio/runtime';
   import { ChangelogService } from '../../bindings/dbird';
   import type { Entry } from '../../bindings/dbird/internal/changelog/models';
-  import logo from '../assets/logo.svg';
+  import logo from '../assets/logo.png';
 
   let { entries, onclose }: { entries: Entry[]; onclose: () => void } = $props();
 

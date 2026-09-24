@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Bird database client logo</title>
+  <desc id="desc">A blue bird wearing a cream shirt with a database stack emblem.</desc>
+  <g stroke="#173B68" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Tail, legs and body sit behind the shirt. -->
+    <path fill="#2776C5" d="M66 151c-15 0-31-8-41-21 2 20 16 34 35 39-12 3-26 1-38-6 12 20 31 30 55 26l31-24z"/>
+    <path fill="none" d="M109 196v25m37-25v25"/>
+    <path fill="none" d="M108 220c-9 4-15 9-22 9m22-9c5 5 9 8 14 9m24-9c-7 4-12 8-18 9m18-9c6 5 11 8 17 9"/>
+    <path fill="#2776C5" d="M80 105c1-39 29-67 65-67 29 0 50 22 51 51 25 13 39 35 39 60 0 39-29 66-74 66h-31c-44 0-73-25-73-60 0-21 8-38 23-50z"/>
+    <!-- A little swept crest makes the silhouette distinct. -->
+    <path fill="#2776C5" d="M108 47c-6-9-7-20-2-29 6 10 14 15 25 17-2-9 0-17 6-23 2 11 9 19 21 25"/>
+    <path fill="#FFC351" d="M185 87c10-10 24-12 38-6-6 13-19 20-39 21z"/>
+    <circle cx="164" cy="75" r="4.5" fill="#173B68" stroke="none"/>
+    <!-- Loose shirt and tucked wing. -->
+    <path fill="#FFF9ED" d="M91 116c-14 3-25 12-33 26l19 17 15-10v42c18 13 39 19 61 19 25 0 44-6 60-19v-48c-7-13-17-21-31-26-8 11-24 18-45 18-20 0-35-6-46-19z"/>
+    <path fill="#2776C5" d="M66 147c-2 20 10 34 32 39 5-11 5-22 0-33-11 4-20 2-32-6z"/>
+    <!-- Three stacked ovals: familiar database cylinder. -->
+    <ellipse cx="155" cy="158" rx="17" ry="5.5" fill="#2776C5" stroke="none"/>
+    <path fill="#2776C5" stroke="none" d="M138 159v10c8 7 26 7 34 0v-10c-9 6-25 6-34 0zm0 15v10c8 7 26 7 34 0v-10c-9 6-25 6-34 0z"/>
+    <path fill="none" stroke="#FFF9ED" stroke-width="2.5" d="M139 169c8 6 24 6 32 0m-32 15c8 6 24 6 32 0"/>
+  </g>
+</svg>
