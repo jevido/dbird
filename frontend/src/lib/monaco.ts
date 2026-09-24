@@ -1,9 +1,39 @@
-// Monaco setup: only the editor core, its standard features and the three SQL
-// languages are bundled (no TypeScript/CSS/HTML/JSON language services).
+// Monaco setup: only the editor core, the editor features a SQL editor uses and
+// the three SQL languages are bundled. The features are picked one by one
+// instead of features/register.all.js, which also brings the diff editor,
+// color picker, code lens, inlay hints, rename, GPU rendering and other parts
+// that need language services dbird doesn't have.
 import * as monaco from 'monaco-editor/editor/editor.api.js';
-import 'monaco-editor/features/register.all.js';
-import 'monaco-editor/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
-import 'monaco-editor/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
+import 'monaco-editor/features/codicon/register.js';
+import 'monaco-editor/features/bracketMatching/register.js';
+import 'monaco-editor/features/caretOperations/register.js';
+import 'monaco-editor/features/clipboard/register.js';
+import 'monaco-editor/features/comment/register.js';
+import 'monaco-editor/features/contextmenu/register.js';
+import 'monaco-editor/features/cursorUndo/register.js';
+import 'monaco-editor/features/dnd/register.js';
+import 'monaco-editor/features/find/register.js';
+import 'monaco-editor/features/folding/register.js';
+import 'monaco-editor/features/fontZoom/register.js';
+import 'monaco-editor/features/gotoLine/register.js';
+import 'monaco-editor/features/hover/register.js';
+import 'monaco-editor/features/indentation/register.js';
+import 'monaco-editor/features/lineSelection/register.js';
+import 'monaco-editor/features/linesOperations/register.js';
+import 'monaco-editor/features/multicursor/register.js';
+import 'monaco-editor/features/placeholderText/register.js';
+import 'monaco-editor/features/quickCommand/register.js';
+import 'monaco-editor/features/readOnlyMessage/register.js';
+import 'monaco-editor/features/smartSelect/register.js';
+import 'monaco-editor/features/snippet/register.js';
+// The autocomplete popup. features/suggest only adds suggestions as inline
+// ghost text; with register.all the popup came in through inlineCompletions.
+import 'monaco-editor/editor/contrib/suggest/browser/suggestController.js';
+import 'monaco-editor/features/toggleTabFocusMode/register.js';
+import 'monaco-editor/features/tokenization/register.js';
+import 'monaco-editor/features/wordHighlighter/register.js';
+import 'monaco-editor/features/wordOperations/register.js';
+import 'monaco-editor/features/wordPartOperations/register.js';
 import 'monaco-editor/languages/definitions/sql/register.js';
 import 'monaco-editor/languages/definitions/mysql/register.js';
 import { conf as pgsqlConf, language as pgsqlBase } from 'monaco-editor/languages/definitions/pgsql/pgsql.js';
