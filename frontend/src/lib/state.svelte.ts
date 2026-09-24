@@ -104,6 +104,9 @@ class AppState {
   // Connection dialog: null = closed.
   editing = $state<Connection | null>(null);
 
+  // DBeaver import dialog.
+  importing = $state(false);
+
   activeTab = $derived(this.tabs.find((t) => t.id === this.activeTabId));
 
   #saveTimer: ReturnType<typeof setTimeout> | undefined;

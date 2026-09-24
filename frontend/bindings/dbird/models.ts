@@ -3,6 +3,9 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as dbeaver$0 from "./internal/dbeaver/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as dbx$0 from "./internal/dbx/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -23,6 +26,17 @@ export interface CompletionSetup {
      */
     "columns": { [_ in string]?: string[] | null } | null;
     "tableCount": number;
+}
+
+/**
+ * DBeaverScan is what ScanDBeaver found.
+ */
+export interface DBeaverScan {
+    /**
+     * Dir is the DBeaver workspace that was read ("" if none was found).
+     */
+    "dir": string;
+    "candidates": dbeaver$0.Candidate[] | null;
 }
 
 /**

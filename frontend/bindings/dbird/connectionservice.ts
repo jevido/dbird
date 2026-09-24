@@ -81,10 +81,26 @@ export function Disconnect(id: string): $CancellablePromise<void> {
 }
 
 /**
+ * Import saves conns as new connections. Nothing is saved unless all of them
+ * are valid.
+ */
+export function Import(conns: store$0.Connection[] | null): $CancellablePromise<number> {
+    return $Call.ByID(4115736032, conns);
+}
+
+/**
  * List returns all saved connections.
  */
 export function List(): $CancellablePromise<store$0.Connection[] | null> {
     return $Call.ByID(4115594309);
+}
+
+/**
+ * PickDBeaverFolder shows a folder dialog and returns the chosen directory
+ * ("" if cancelled).
+ */
+export function PickDBeaverFolder(): $CancellablePromise<string> {
+    return $Call.ByID(2553633517);
 }
 
 /**
@@ -100,6 +116,15 @@ export function PickSQLiteFile(): $CancellablePromise<string> {
  */
 export function Save(c: store$0.Connection): $CancellablePromise<store$0.Connection> {
     return $Call.ByID(3893059340, c);
+}
+
+/**
+ * ScanDBeaver reads the connections of the DBeaver workspace in dir, or of
+ * the first one found on this machine when dir is empty. Finding none is not
+ * an error: Dir is then empty.
+ */
+export function ScanDBeaver(dir: string): $CancellablePromise<$models.DBeaverScan> {
+    return $Call.ByID(891624637, dir);
 }
 
 /**

@@ -14,6 +14,8 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
 
 - **Connections**: PostgreSQL, MySQL/MariaDB and SQLite. Host/port form or a raw
   connection URL/DSN, test button, color tag, duplicate/edit/delete.
+  **Import from DBeaver** brings over saved PostgreSQL, MySQL and SQLite
+  connections, including their saved passwords; SSH tunnels aren't supported.
 - **Database tree**: schemas → tables/views → columns (with PK and types),
   lazy-loaded. Double-click a table to open its data. Filter box matches
   connection and table names. Right-click for more actions.

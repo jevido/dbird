@@ -20,6 +20,7 @@ export {
 
 export type {
     CompletionSetup,
+    DBeaverScan,
     OmarchyTheme,
     OpenedFile,
     TablePage,

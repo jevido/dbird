@@ -4,6 +4,7 @@
   import EditorPane from './lib/EditorPane.svelte';
   import ConnectionDialog from './lib/ConnectionDialog.svelte';
   import ConfirmDialog from './lib/ConfirmDialog.svelte';
+  import ImportDialog from './lib/ImportDialog.svelte';
   import { forgetEditorState } from './lib/SqlEditor.svelte';
   import { app, errorText } from './lib/state.svelte';
   import { initTheme } from './lib/theme';
@@ -123,6 +124,10 @@
 
 {#if app.editing}
   <ConnectionDialog initial={app.editing} />
+{/if}
+
+{#if app.importing}
+  <ImportDialog />
 {/if}
 
 {#if whatsNew.length > 0}

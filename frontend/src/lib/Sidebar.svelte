@@ -244,6 +244,9 @@
     <img class="logo" src={logo} alt="" />
     <span class="brand">dbird</span>
     <span class="title">Connections</span>
+    <button class="icon-btn" title="Import from DBeaver" onclick={() => (app.importing = true)}>
+      <svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 12.5h10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    </button>
     <button class="icon-btn" title="New connection" onclick={() => (app.editing = emptyConnection())}>
       <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" fill="none" /></svg>
     </button>
@@ -264,6 +267,7 @@
       <div class="empty">
         <p>No connections yet.</p>
         <button class="btn primary" onclick={() => (app.editing = emptyConnection())}>New connection</button>
+        <button class="btn" onclick={() => (app.importing = true)}>Import from DBeaver</button>
       </div>
     {/if}
 
@@ -476,6 +480,11 @@
   }
   .empty p {
     margin: 0 0 10px;
+  }
+  .empty .btn {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
   }
   .node {
     --depth: 0;
