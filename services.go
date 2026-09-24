@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -392,20 +393,62 @@ func (s *QueryService) Run(ctx context.Context, tabID, connID string, statements
 	return s.dbm.Run(ctx, tabID, connID, statements, maxRows, continueOnError)
 }
 
-// SaveEdits writes cells edited in the result grid back to their table, in
-// one transaction on connection connID. It returns the number of rows updated.
-func (s *QueryService) SaveEdits(ctx context.Context, connID string, req dbx.EditRequest) (int, error) {
-	if len(req.Rows) == 0 {
-		return 0, errors.New("nothing to save")
+// SaveEdits writes rows edited, added and deleted in the result grid back to
+// their table, in one transaction on connection connID, and returns the saved
+// rows as now stored.
+func (s *QueryService) SaveEdits(ctx context.Context, connID string, req dbx.EditRequest) (*dbx.SaveResult, error) {
+	if len(req.Updates)+len(req.Inserts)+len(req.Deletes) == 0 {
+		return nil, errors.New("nothing to save")
 	}
-	if err := s.conns.ensure(ctx, connID); err != nil {
-		return 0, err
-	}
-	db, driver, err := s.dbm.DB(connID)
+	db, driver, err := s.pool(ctx, connID)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	return dbx.SaveEdits(ctx, db, driver, req)
+}
+
+// PreviewEdits returns the statements SaveEdits would run.
+func (s *QueryService) PreviewEdits(ctx context.Context, connID string, req dbx.EditRequest) ([]string, error) {
+	db, driver, err := s.pool(ctx, connID)
+	if err != nil {
+		return nil, err
+	}
+	return dbx.PreviewEdits(ctx, db, driver, req)
+}
+
+// Browse runs stmt, a SELECT from one table, rewritten with a filter, sort
+// order and page (see dbx.BrowseSQL) on the session of tabID.
+func (s *QueryService) Browse(ctx context.Context, tabID, connID, stmt string, opt dbx.BrowseOptions, maxRows int) (dbx.Result, error) {
+	_, driver, err := s.pool(ctx, connID)
+	if err != nil {
+		return dbx.Result{}, err
+	}
+	q, err := dbx.BrowseSQL(stmt, driver, opt)
+	if err != nil {
+		return dbx.Result{}, err
+	}
+	res, err := s.Run(ctx, tabID, connID, []string{q}, maxRows, false)
+	if err != nil {
+		return dbx.Result{}, err
+	}
+	return res[0], nil
+}
+
+// ReferencedValues returns values of the column ref, starting with prefix,
+// for picking a foreign key.
+func (s *QueryService) ReferencedValues(ctx context.Context, connID string, ref dbx.ColumnRef, prefix string) ([]string, error) {
+	db, driver, err := s.pool(ctx, connID)
+	if err != nil {
+		return nil, err
+	}
+	return dbx.ReferencedValues(ctx, db, driver, ref, prefix)
+}
+
+func (s *QueryService) pool(ctx context.Context, connID string) (*sql.DB, string, error) {
+	if err := s.conns.ensure(ctx, connID); err != nil {
+		return nil, "", err
+	}
+	return s.dbm.DB(connID)
 }
 
 // Cancel aborts the running query of tabID.

@@ -283,6 +283,7 @@ func (m *Manager) Run(ctx context.Context, tabID, connID string, statements []st
 		r := Execute(ctx, s.conn, stmt, maxRows)
 		if r.HasResultSet && r.Error == "" && ctx.Err() == nil {
 			r.Editable, r.ReadOnly = EditInfo(ctx, s.conn, driver, stmt, r.Columns)
+			r.Browse = browsable(stmt, driver)
 		}
 		results = append(results, r)
 		if ctx.Err() != nil {

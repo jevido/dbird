@@ -191,7 +191,7 @@ func SchemaColumns(ctx context.Context, db *sql.DB, driver, schema string) (map[
 	}
 }
 
-func queryStrings(ctx context.Context, db *sql.DB, q string, args ...any) ([]string, error) {
+func queryStrings(ctx context.Context, db Querier, q string, args ...any) ([]string, error) {
 	rows, err := db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err

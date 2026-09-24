@@ -32,6 +32,9 @@ type Result struct {
 	// ReadOnly says why not.
 	Editable *Editable `json:"editable"`
 	ReadOnly string    `json:"readOnly"`
+	// Browse is set for a SELECT from one table (or view), which can be
+	// filtered, sorted and paged on the server (see BrowseSQL).
+	Browse *Browsable `json:"browse"`
 }
 
 // Querier is satisfied by *sql.DB, *sql.Conn and *sql.Tx.
@@ -112,48 +115,51 @@ func Execute(ctx context.Context, q Querier, stmt string, maxRows int) Result {
 	}
 	defer rows.Close()
 
-	cols, err := rows.ColumnTypes()
+	res.Columns, res.Rows, res.Truncated, err = readRows(rows, maxRows)
 	if err != nil {
 		res.Error = err.Error()
-		res.DurationMs = ms(start)
-		return res
 	}
-	res.HasResultSet = len(cols) > 0
-	res.Columns = make([]Column, len(cols))
-	for i, c := range cols {
+	res.HasResultSet = len(res.Columns) > 0
+	res.DurationMs = ms(start)
+	return res
+}
+
+// readRows reads at most maxRows rows (0 = all) as display text. truncated
+// is set when more rows were available.
+func readRows(rows *sql.Rows, maxRows int) (cols []Column, out [][]*string, truncated bool, err error) {
+	types, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, nil, false, err
+	}
+	cols = make([]Column, len(types))
+	for i, c := range types {
 		t := strings.ToLower(c.DatabaseTypeName())
 		if strings.HasPrefix(t, "_") { // PostgreSQL array types, e.g. _int4
 			t = t[1:] + "[]"
 		}
-		res.Columns[i] = Column{Name: c.Name(), Type: t}
+		cols[i] = Column{Name: c.Name(), Type: t}
 	}
-	res.Rows = [][]*string{}
-
+	out = [][]*string{}
 	vals := make([]any, len(cols))
 	ptrs := make([]any, len(cols))
 	for i := range vals {
 		ptrs[i] = &vals[i]
 	}
 	for rows.Next() {
-		if maxRows > 0 && len(res.Rows) >= maxRows {
-			res.Truncated = true
+		if maxRows > 0 && len(out) >= maxRows {
+			truncated = true
 			break
 		}
 		if err := rows.Scan(ptrs...); err != nil {
-			res.Error = err.Error()
-			break
+			return cols, out, truncated, err
 		}
 		row := make([]*string, len(cols))
 		for i, v := range vals {
-			row[i] = format(v, res.Columns[i].Type)
+			row[i] = format(v, cols[i].Type)
 		}
-		res.Rows = append(res.Rows, row)
+		out = append(out, row)
 	}
-	if err := rows.Err(); err != nil && res.Error == "" {
-		res.Error = err.Error()
-	}
-	res.DurationMs = ms(start)
-	return res
+	return cols, out, truncated, rows.Err()
 }
 
 func ms(start time.Time) float64 {

@@ -27,12 +27,25 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
   tables, look up beyond that). Tabs are restored
   on restart, can be renamed (double-click), reordered (drag) and closed with
   middle-click.
-- **Editing results**: results of a `SELECT` from a single table with its
-  primary key are editable. Double-click a cell (or press F2, or just start
-  typing), right-click to set NULL or revert, and save with the bar below the
-  grid or Ctrl+S. Changes are written with `UPDATE … WHERE <primary key>` in
-  one transaction, and nothing is saved unless every row still matches.
-  Joins, grouping, views and binary or array columns stay read-only.
+- **Editing results**: results of a `SELECT` from a single table are editable
+  when they include its primary key (or a unique key without NULLs).
+  - Double-click a cell, press F2 or just start typing. Booleans toggle,
+    enums get a dropdown, dates a date picker, JSON and long text open in an
+    editor that checks JSON. Foreign keys suggest values from the referenced
+    table, and ↗ opens the referenced row.
+  - Select ranges with Shift+click or Shift+arrows: Ctrl+C copies, Ctrl+V
+    pastes from a spreadsheet (adding rows as needed), Ctrl+D fills down.
+  - **+ Row** adds a row (columns left empty get their default), Del marks
+    rows for deletion, Ctrl+Z / Ctrl+Shift+Z undo and redo.
+  - Save with the bar below the grid or Ctrl+S; **SQL** shows the statements
+    first. Everything is saved in one transaction, and a row someone else
+    changed since you loaded it is refused rather than overwritten. Saved rows
+    are read back, so defaults and triggers show up.
+  - Results of a single-table `SELECT` can also be filtered (a `WHERE`
+    condition), sorted by clicking a column header, and extended with
+    **Load more**, all on the server.
+  - Joins, grouping, views, and binary, array and generated columns stay
+    read-only, with the reason shown.
 - **Execution**: each tab has its own dedicated database session, so `SET`,
   `USE`, `BEGIN`/`COMMIT` and temp tables behave like in a terminal client.
   Queries can be cancelled. A `DELETE` without a `WHERE` clause asks for

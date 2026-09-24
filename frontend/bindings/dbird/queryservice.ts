@@ -15,6 +15,14 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as dbx$0 from "./internal/dbx/models.js";
 
 /**
+ * Browse runs stmt, a SELECT from one table, rewritten with a filter, sort
+ * order and page (see dbx.BrowseSQL) on the session of tabID.
+ */
+export function Browse(tabID: string, connID: string, stmt: string, opt: dbx$0.BrowseOptions, maxRows: number): $CancellablePromise<dbx$0.Result> {
+    return $Call.ByID(858772907, tabID, connID, stmt, opt, maxRows);
+}
+
+/**
  * Cancel aborts the running query of tabID.
  */
 export function Cancel(tabID: string): $CancellablePromise<void> {
@@ -29,6 +37,21 @@ export function CloseTab(tabID: string): $CancellablePromise<void> {
 }
 
 /**
+ * PreviewEdits returns the statements SaveEdits would run.
+ */
+export function PreviewEdits(connID: string, req: dbx$0.EditRequest): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1700487548, connID, req);
+}
+
+/**
+ * ReferencedValues returns values of the column ref, starting with prefix,
+ * for picking a foreign key.
+ */
+export function ReferencedValues(connID: string, ref: dbx$0.ColumnRef, prefix: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2567191092, connID, ref, prefix);
+}
+
+/**
  * Run executes statements for tabID on connection connID, connecting first if
  * needed. At most maxRows rows are returned per result set.
  */
@@ -37,9 +60,10 @@ export function Run(tabID: string, connID: string, statements: string[] | null, 
 }
 
 /**
- * SaveEdits writes cells edited in the result grid back to their table, in
- * one transaction on connection connID. It returns the number of rows updated.
+ * SaveEdits writes rows edited, added and deleted in the result grid back to
+ * their table, in one transaction on connection connID, and returns the saved
+ * rows as now stored.
  */
-export function SaveEdits(connID: string, req: dbx$0.EditRequest): $CancellablePromise<number> {
+export function SaveEdits(connID: string, req: dbx$0.EditRequest): $CancellablePromise<dbx$0.SaveResult | null> {
     return $Call.ByID(2830327577, connID, req);
 }

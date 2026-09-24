@@ -124,7 +124,7 @@
   <div class="hsplit" role="separator" aria-orientation="horizontal" onpointerdown={startResize}></div>
 
   <div class="results-wrap" style:height="{resultsH}px">
-    <ResultsPanel {rt} results={app.results[tab.id] ?? []} name={tab.title.replace(/\.sql$/i, '')} />
+    <ResultsPanel {rt} {tab} results={app.results[tab.id] ?? []} name={tab.title.replace(/\.sql$/i, '')} />
   </div>
 </div>
 

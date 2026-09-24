@@ -4,7 +4,17 @@ import type { Connection, Tab } from '../../bindings/dbird/internal/store/models
 import type { Result } from '../../bindings/dbird/internal/dbx/models';
 import type { CompletionSetup, PasswordStoreInfo } from '../../bindings/dbird/models';
 import { invalidateCompletionCache } from './monaco';
-import { pendingEdits, setResultConnection } from './gridedits.svelte';
+import {
+  browseState,
+  editsFor,
+  pendingEdits,
+  resultConnection,
+  setBrowseState,
+  setResultConnection,
+  type BrowseState,
+} from './gridedits.svelte';
+import type { ColumnRef } from '../../bindings/dbird/internal/dbx/models';
+import { quoteIdent } from './sqlutil';
 import { splitStatements, statementAt, unfilteredDelete, type Dialect, type Statement } from './sqlsplit';
 
 export type { Connection, Tab, Result };
@@ -688,6 +698,89 @@ class AppState {
     } finally {
       rt.running = false;
     }
+  }
+
+  // ---- browsing results: server-side filter, sort and paging ----
+
+  // Runs the query behind result again with another filter or sort order,
+  // replacing it. A failing filter keeps the old result and says why.
+  async browse(tab: Tab, result: Result, patch: Partial<Pick<BrowseState, 'filter' | 'orderBy' | 'desc'>>) {
+    const rt = this.runtime[tab.id];
+    if (!rt || rt.running) return;
+    const edits = editsFor(result);
+    if (edits.count > 0) {
+      const ok = await this.ask({
+        title: 'Discard unsaved changes?',
+        message: `Filtering or sorting runs the query again, which throws away ${edits.count} unsaved change${edits.count === 1 ? '' : 's'}.`,
+        details: [],
+        confirmLabel: 'Discard changes',
+      });
+      if (!ok) return;
+    }
+    const connId = resultConnection(result) || tab.connectionId;
+    const next: BrowseState = { ...browseState(result), ...patch, exhausted: false };
+    rt.running = true;
+    rt.startedAt = Date.now();
+    try {
+      const r = await QueryService.Browse(
+        tab.id,
+        connId,
+        next.base,
+        { filter: next.filter, orderBy: next.orderBy, desc: next.desc, limit: 0, offset: 0 },
+        this.maxRows,
+      );
+      if (r.error) {
+        this.toast(r.error, 'error');
+        return;
+      }
+      setResultConnection(r, connId);
+      setBrowseState(r, next);
+      const list = [...(this.results[tab.id] ?? [])];
+      const i = list.indexOf(result);
+      if (i >= 0) list[i] = r;
+      else list.push(r);
+      this.results = { ...this.results, [tab.id]: list };
+    } catch (e) {
+      this.toast(errorText(e), 'error');
+    } finally {
+      rt.running = false;
+    }
+  }
+
+  // Appends the next page of rows to result.
+  async loadMore(tab: Tab, result: Result) {
+    const s = browseState(result);
+    const edits = editsFor(result);
+    const page = result.browse?.limit || this.maxRows;
+    try {
+      const r = await QueryService.Browse(
+        tab.id,
+        resultConnection(result) || tab.connectionId,
+        s.base,
+        { filter: s.filter, orderBy: s.orderBy, desc: s.desc, limit: page, offset: edits.base },
+        this.maxRows,
+      );
+      if (r.error) {
+        this.toast(r.error, 'error');
+        return;
+      }
+      const more = r.rows ?? [];
+      (result.rows ??= []).push(...more);
+      result.truncated = false;
+      if (more.length < page) s.exhausted = true;
+      edits.version++;
+    } catch (e) {
+      this.toast(errorText(e), 'error');
+    }
+  }
+
+  // Opens the row a foreign key value points to in a new tab.
+  openReference(connId: string, ref: ColumnRef, value: string) {
+    const driver = this.connection(connId)?.driver ?? 'postgres';
+    const q = (s: string) => quoteIdent(driver, s);
+    const sql = `SELECT *\nFROM ${q(ref.schema)}.${q(ref.table)}\nWHERE ${q(ref.column)} = '${value.replace(/'/g, "''")}';\n`;
+    const tab = this.newTab(connId, sql, ref.table);
+    this.run(tab, [sql]);
   }
 
   async cancel(tabId: string) {
