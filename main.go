@@ -18,6 +18,7 @@ var assets embed.FS
 var appIcon []byte
 
 func main() {
+	guardUpdaterHelper()
 	path, err := store.DefaultPath()
 	if err != nil {
 		log.Fatal(err)

@@ -211,6 +211,7 @@ func (s *UpdateService) run(ctx context.Context) {
 		s.set(func(st *UpdateStatus) { st.State = "manual"; st.PackageManaged = packageManaged() })
 		return
 	}
+	stageNextToApp()
 	if err := u.DownloadAndInstall(ctx); err != nil {
 		s.set(func(st *UpdateStatus) { st.State = "error"; st.Error = err.Error() })
 		return
@@ -246,4 +247,78 @@ func (s *UpdateService) OpenReleasePage() error {
 		url = "https://github.com/" + updateRepo + "/releases/latest"
 	}
 	return application.Get().Browser.OpenURL(url)
+}
+
+// Workarounds for the Wails updater (wailsapp/wails#6134, still open in
+// v3.0.0-beta.25). Its helper downloads the new version to the system temp
+// directory and renames it over the app. When the temp directory is on another
+// filesystem (tmpfs /tmp on Arch and Fedora, or a separate /home partition)
+// the rename fails; the helper then restores the old binary but relaunches it
+// with its helper environment still set, so that binary becomes a helper
+// again: a loop that deletes the app every few seconds.
+
+const (
+	helperEnv     = "WAILS_UPDATER_HELPER"
+	helperRanEnv  = "DBIRD_UPDATER_HELPER_RAN"
+	origTmpDirEnv = "DBIRD_ORIG_TMPDIR"
+	stagingDir    = ".dbird-update"
+)
+
+// guardUpdaterHelper runs before application.New, which enters Wails' helper
+// mode. A binary relaunched by a helper that failed its swap still has the
+// helper environment; it is recognized by the marker the first helper sets,
+// and starts as the normal app instead.
+func guardUpdaterHelper() {
+	if os.Getenv(helperEnv) == "1" && os.Getenv(helperRanEnv) == "" {
+		os.Setenv(helperRanEnv, "1") // this is the helper
+		return
+	}
+	for _, k := range []string{helperEnv, helperEnv + "_TARGET", helperEnv + "_NEW", helperEnv + "_PID", helperEnv + "_LOG", helperRanEnv} {
+		os.Unsetenv(k)
+	}
+	restoreTempDir()
+}
+
+// stageNextToApp makes the updater download into a directory next to the app,
+// on the same filesystem, so moving the new version into place is a rename
+// that works. The helper and the relaunched app inherit the setting;
+// restoreTempDir undoes it.
+func stageNextToApp() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return
+	}
+	exe, _ = filepath.EvalSymlinks(exe)
+	dir := filepath.Join(filepath.Dir(exe), stagingDir)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return
+	}
+	if _, set := os.LookupEnv(origTmpDirEnv); !set {
+		os.Setenv(origTmpDirEnv, os.Getenv("TMPDIR"))
+	}
+	os.Setenv("TMPDIR", dir)
+}
+
+// restoreTempDir puts back the temp directory a relaunched app inherited from
+// stageNextToApp, and removes what an earlier update left in the staging
+// directory.
+func restoreTempDir() {
+	if orig, set := os.LookupEnv(origTmpDirEnv); set {
+		if orig == "" {
+			os.Unsetenv("TMPDIR")
+		} else {
+			os.Setenv("TMPDIR", orig)
+		}
+		os.Unsetenv(origTmpDirEnv)
+	}
+	if runtime.GOOS != "linux" {
+		return
+	}
+	if exe, err := os.Executable(); err == nil {
+		exe, _ = filepath.EvalSymlinks(exe)
+		os.RemoveAll(filepath.Join(filepath.Dir(exe), stagingDir))
+	}
 }
