@@ -5,8 +5,21 @@
 [![CI](https://github.com/jevido/dbird/actions/workflows/ci.yml/badge.svg)](https://github.com/jevido/dbird/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/jevido/dbird)](https://github.com/jevido/dbird/releases/latest)
 
-A lightweight SQL client, built as an alternative to DBeaver for the two things
-used most: many saved connections, and tabbed SQL editors with a result grid.
+A lightweight SQL client: many saved connections, and tabbed SQL editors with a
+result grid.
+
+## Why
+
+[DBeaver](https://dbeaver.io) is, as far as I'm concerned, the best database
+client there is, and I used it happily for years. But looking at how I actually
+used it, it came down to two things: keeping a long list of connections, and
+running queries against them. All the rest of what DBeaver can do, I never
+touched.
+
+So I built DBird: the part of DBeaver I used every day, and nothing else. It
+starts quickly and stays small. If you need more than connections and queries,
+DBeaver is still the one to get. If you already use it, DBird can import your
+saved connections.
 
 Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
 
