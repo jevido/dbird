@@ -1,6 +1,6 @@
 [Desktop Entry]
 Version=1.0
-Name=dbird
+Name=DBird
 Comment=A lightweight SQL client
 # The Exec line includes %u to pass the URL to the application
 Exec=/usr/local/bin/dbird %u
