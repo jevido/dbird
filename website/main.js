@@ -5,7 +5,7 @@ const DL = `https://github.com/${REPO}/releases/latest/download/`;
 // Recommend the download for the visitor's platform.
 const ua = navigator.userAgent;
 const isWindows = /Windows/i.test(ua);
-// iPads report themselves as Macs; there is no dbird for them.
+// iPads report themselves as Macs; there is no DBird for them.
 const isMac = /Macintosh/i.test(ua) && navigator.maxTouchPoints <= 1;
 const isLinux = !/Android/i.test(ua) && /Linux|X11/i.test(ua);
 
@@ -31,7 +31,7 @@ if (isWindows) {
   recommend("mac");
 } else if (isLinux) {
   primary.href = "#linux";
-  label.textContent = "Get dbird for Linux";
+  label.textContent = "Get DBird for Linux";
   sub.textContent = "One-line install or package";
   recommend("linux");
 }
