@@ -156,7 +156,7 @@ class AppState {
       const n = pwStore.plaintextLeft;
       this.toast(
         `${n} saved password${n === 1 ? ' is' : 's are'} still stored unencrypted, because no password store is available. ` +
-          'Set up a password store (GNOME Keyring, KWallet or KeePassXC) and restart dbird to encrypt them.',
+          'Set up a password store (GNOME Keyring, KWallet or KeePassXC) and restart DBird to encrypt them.',
         'error',
         20000,
       );
@@ -227,7 +227,7 @@ class AppState {
     if (stale.some((t) => t.dirty)) {
       const reload = await this.ask({
         title: 'File changed on disk',
-        message: `“${title}” was changed outside dbird, and ${tabs.length > 1 ? 'a tab showing it has' : 'this tab has'} edits that aren't saved to the file.`,
+        message: `“${title}” was changed outside DBird, and ${tabs.length > 1 ? 'a tab showing it has' : 'this tab has'} edits that aren't saved to the file.`,
         details: [path],
         confirmLabel: 'Reload from disk',
         cancelLabel: 'Keep my version',

@@ -117,7 +117,7 @@
                 <span class="note bad">{c.problem}</span>
               {:else}
                 <span class="target">{target(c)}</span>
-                {#if c.existing}<span class="note">Already in dbird as “{c.existing}”</span>{/if}
+                {#if c.existing}<span class="note">Already in DBird as “{c.existing}”</span>{/if}
                 {#each c.warnings ?? [] as w (w)}<span class="note warn">{w}</span>{/each}
               {/if}
             </span>

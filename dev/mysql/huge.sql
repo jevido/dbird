@@ -1,5 +1,5 @@
 -- The MySQL counterpart of dev/postgres/huge.sql: creates many views through
--- a stored procedure. Paste it into a dbird tab on a MySQL connection and run
+-- a stored procedure. Paste it into a DBird tab on a MySQL connection and run
 -- it as a script (Alt+X). MySQL is much slower at DDL than PostgreSQL (each
 -- view is synced to disk), so this makes 1,000, which takes a few minutes.
 DROP PROCEDURE IF EXISTS make_relations;

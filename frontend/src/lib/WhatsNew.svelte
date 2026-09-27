@@ -44,7 +44,7 @@
     <header>
       <img src={logo} alt="" class="logo" />
       <div>
-        <h2 id="wn-title">What's new in dbird</h2>
+        <h2 id="wn-title">What's new in DBird</h2>
         <p class="sub">You're now on <span class="pill">{latest.version}</span></p>
       </div>
     </header>

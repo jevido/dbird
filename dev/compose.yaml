@@ -1,4 +1,4 @@
-# Sample databases for trying dbird locally.
+# Sample databases for trying DBird locally.
 #   task dev:db:up     start (first start seeds the data)
 #   task dev:db:down   stop and delete the data
 name: dbird-dev

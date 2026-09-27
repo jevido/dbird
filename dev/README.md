@@ -1,7 +1,7 @@
 # Sample databases
 
 Three sample databases with the same small shop in them (customers, products,
-orders, order items), so you can try dbird against every supported driver.
+orders, order items), so you can try DBird against every supported driver.
 
 ```sh
 wails3 task dev:db:up     # start PostgreSQL + MySQL containers, create the SQLite file
@@ -14,7 +14,7 @@ It uses `docker compose` when the Docker daemon is reachable, otherwise
 
 ## Connections
 
-Add these in dbird with the **+** next to *Connections*:
+Add these in DBird with the **+** next to *Connections*:
 
 | Type | Host | Port | Database | User / password | Other |
 | --- | --- | --- | --- | --- | --- |
@@ -48,7 +48,7 @@ why that is not the default for big schemas.
 
 `dev/postgres/huge.sql` and `dev/mysql/huge.sql` are also plain scripts you
 can paste into a tab and run with `Alt+X`: they create a stored procedure,
-call it and drop it again, which shows dbird keeping procedure bodies (with
+call it and drop it again, which shows DBird keeping procedure bodies (with
 their inner `;`) together.
 
 ## Things to try
