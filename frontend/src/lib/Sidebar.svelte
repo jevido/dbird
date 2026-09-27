@@ -242,7 +242,7 @@
 <aside class="sidebar">
   <div class="head">
     <img class="logo" src={logo} alt="" />
-    <span class="brand">dbird</span>
+    <span class="brand">DBird</span>
     <span class="title">Connections</span>
     <button class="icon-btn" title="Import from DBeaver" onclick={() => (app.importing = true)}>
       <svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 12.5h10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>

@@ -1,6 +1,6 @@
-<p align="center"><img src="assets/logo.png" width="128" alt="dbird logo"></p>
+<p align="center"><img src="assets/logo.png" width="128" alt="DBird logo"></p>
 
-# dbird
+# DBird
 
 [![CI](https://github.com/jevido/dbird/actions/workflows/ci.yml/badge.svg)](https://github.com/jevido/dbird/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/jevido/dbird)](https://github.com/jevido/dbird/releases/latest)
@@ -55,7 +55,7 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
   copy as TSV, export to CSV. Scripts produce one result tab per statement.
 - **Files**: open and save `.sql` scripts. Open scripts are watched: save the
   file in another editor (the toolbar button opens it in your default one) and
-  dbird shows the new content. If the tab has unsaved edits (marked •), dbird
+  DBird shows the new content. If the tab has unsaved edits (marked •), DBird
   asks before replacing them.
 
 ## Install
@@ -66,11 +66,11 @@ Built with [Wails v3](https://v3.wails.io) (`v3.0.0-beta.18`), Go and Svelte 5.
 curl -fsSL https://raw.githubusercontent.com/jevido/dbird/main/install.sh | sh
 ```
 
-This installs the latest release into your home directory (no sudo), where dbird
+This installs the latest release into your home directory (no sudo), where DBird
 can update itself: the binary goes to `~/.local/share/dbird`, linked as
-`~/.local/bin/dbird`, and dbird is added to your app launcher. If GTK 4 or
+`~/.local/bin/dbird`, and DBird is added to your app launcher. If GTK 4 or
 WebKitGTK 6.0 is missing, the script prints the command to install them. The
-same command works on macOS, where it installs `~/Applications/dbird.app`.
+same command works on macOS, where it installs `~/Applications/DBird.app`.
 
 To uninstall:
 
@@ -88,14 +88,14 @@ Download the latest build from [Releases](https://github.com/jevido/dbird/releas
 | --- | --- | --- |
 | Linux | `dbird-linux-amd64.tar.gz` / `dbird-linux-arm64.tar.gz`: extract anywhere you can write, run `./dbird` | yes |
 | Linux | `.AppImage`, `.deb`, `.rpm`, `.pkg.tar.zst` | no, you get a download link when a new version is out |
-| macOS (Intel + Apple Silicon) | `dbird-darwin-universal.zip`: unzip and move `dbird.app` to Applications | yes |
+| macOS (Intel + Apple Silicon) | `dbird-darwin-universal.zip`: unzip and move `DBird.app` to Applications | yes |
 | Windows | `dbird-windows-amd64.zip`: unzip and run `dbird.exe` (needs the WebView2 runtime, included in Windows 10/11) | yes |
 
 Linux needs GTK 4 and WebKitGTK 6.0 (`libgtk-4-1 libwebkitgtk-6.0-4` on Debian/Ubuntu,
 `gtk4 webkitgtk-6.0` on Arch/Fedora).
 
 The macOS app is not notarized yet. After unzipping, run
-`xattr -dr com.apple.quarantine /Applications/dbird.app` once, or right-click the app and choose Open.
+`xattr -dr com.apple.quarantine /Applications/DBird.app` once, or right-click the app and choose Open.
 
 ### Updates
 
@@ -179,7 +179,7 @@ Settings live in `~/.config/dbird/dbird.json` (or the OS equivalent).
 Passwords are never written there: they are kept in the OS password store (the
 Secret Service, e.g. GNOME Keyring, KWallet or KeePassXC, on Linux; the Keychain
 on macOS; Credential Manager on Windows). A password typed into a connection URL
-is split off into the password store too. Without a password store dbird asks
+is split off into the password store too. Without a password store DBird asks
 for passwords when connecting and keeps them in memory until it quits. Passwords
 saved in plain text by versions before 0.3 are moved to the password store on
 startup.

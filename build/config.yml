@@ -5,8 +5,8 @@ version: '3'
 
 # This information is used to generate the build assets.
 info:
-  companyName: "dbird" # The name of the company
-  productName: "dbird" # The name of the application
+  companyName: "DBird" # The name of the company
+  productName: "DBird" # The name of the application
   productIdentifier: "nl.dbird.app" # The unique product identifier
   description: "A lightweight SQL client" # The application description
   copyright: "(c) 2026, dbird" # Copyright text

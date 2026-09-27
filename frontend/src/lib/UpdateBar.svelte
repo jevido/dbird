@@ -13,7 +13,7 @@
       const prev = status?.state;
       status = e.data;
       if (status.state === 'ready' && prev !== 'ready') {
-        app.toast(`dbird ${status.latestVersion} is ready — restart to update`);
+        app.toast(`DBird ${status.latestVersion} is ready — restart to update`);
       }
     });
     return () => off();
@@ -22,7 +22,7 @@
   async function check() {
     try {
       status = await UpdateService.CheckNow();
-      if (status.state === 'up-to-date') app.toast(`dbird ${status.currentVersion} is up to date`);
+      if (status.state === 'up-to-date') app.toast(`DBird ${status.currentVersion} is up to date`);
       if (status.state === 'error') app.toast(`Update check failed: ${status.error}`, 'error');
     } catch (e) {
       app.toast(errorText(e), 'error');
@@ -58,7 +58,7 @@
     </button>
   {:else}
     <span class="version" title={status?.checkedAt ? `Last checked ${new Date(status.checkedAt).toLocaleString()}` : ''}>
-      dbird {status?.currentVersion ?? ''}
+      DBird {status?.currentVersion ?? ''}
     </span>
     <span class="spacer"></span>
     {#if status && status.state !== 'disabled'}

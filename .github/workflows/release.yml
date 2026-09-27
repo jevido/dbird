@@ -94,7 +94,9 @@ jobs:
         run: |
           wails3 task darwin:package:universal VERSION="$VERSION" UPDATE_REPO="$UPDATE_REPO"
           mkdir -p dist
-          ditto -c -k --keepParent bin/dbird.app dist/dbird-darwin-universal.zip
+          # The bundle name is what Finder and the Dock show.
+          mv bin/dbird.app bin/DBird.app
+          ditto -c -k --keepParent bin/DBird.app dist/dbird-darwin-universal.zip
 
       - name: Build Windows exe
         if: matrix.target == 'windows'

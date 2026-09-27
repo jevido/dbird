@@ -2,6 +2,8 @@ version: '3'
 
 vars:
   APP_NAME: "dbird"
+  # The name people see (launcher entries); APP_NAME names files and binaries.
+  DISPLAY_NAME: "DBird"
   BIN_DIR: "bin"
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9270}}'

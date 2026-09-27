@@ -32,7 +32,7 @@ func main() {
 	conns.migratePasswords()
 
 	app := application.New(application.Options{
-		Name:        "dbird",
+		Name:        "DBird",
 		Description: "A lightweight SQL client",
 		Icon:        appIcon,
 		Services: []application.Service{
@@ -53,7 +53,7 @@ func main() {
 	})
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "dbird",
+		Title:            "DBird",
 		Width:            1280,
 		Height:           800,
 		MinWidth:         720,

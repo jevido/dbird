@@ -126,7 +126,7 @@
     {/if}
     {#if !pwStore.available}
       <small class="warn">
-        No password store found, so dbird won't save this password and will ask for it when connecting. Set up a password store (GNOME
+        No password store found, so DBird won't save this password and will ask for it when connecting. Set up a password store (GNOME
         Keyring, KWallet or KeePassXC) to have it remembered securely.
       </small>
     {/if}

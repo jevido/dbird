@@ -282,7 +282,7 @@ func convert(dc dsConnection, cred map[string]string) Candidate {
 	c.Driver = driverFor(dc.Provider, dc.Driver)
 	if c.Driver == "" {
 		cand.Connection = c
-		cand.Problem = fmt.Sprintf("%s isn't supported by dbird", driverLabel(dc))
+		cand.Problem = fmt.Sprintf("%s isn't supported by DBird", driverLabel(dc))
 		return cand
 	}
 
@@ -301,9 +301,9 @@ func convert(dc dsConnection, cred map[string]string) Candidate {
 		}
 		switch {
 		case strings.Contains(name, "ssh"):
-			cand.Warnings = append(cand.Warnings, "uses an SSH tunnel, which dbird doesn't support")
+			cand.Warnings = append(cand.Warnings, "uses an SSH tunnel, which DBird doesn't support")
 		case strings.Contains(name, "proxy"):
-			cand.Warnings = append(cand.Warnings, "uses a proxy, which dbird doesn't support")
+			cand.Warnings = append(cand.Warnings, "uses a proxy, which DBird doesn't support")
 		case strings.Contains(name, "ssl"):
 			if c.Driver == dbx.Postgres {
 				c.SSLMode = sslMode(h.Properties)

@@ -5,10 +5,10 @@
 	"info": {
 		"0000": {
 			"ProductVersion": "0.0.1",
-			"CompanyName": "dbird",
+			"CompanyName": "DBird",
 			"FileDescription": "A lightweight SQL client",
-			"LegalCopyright": "(c) 2026, dbird",
-			"ProductName": "dbird",
+			"LegalCopyright": "(c) 2026, DBird",
+			"ProductName": "DBird",
 			"Comments": "Multi-connection SQL editor"
 		}
 	}

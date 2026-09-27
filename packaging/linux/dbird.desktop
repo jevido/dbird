@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=dbird
+Name=DBird
 GenericName=SQL Client
 Comment=Lightweight SQL client for PostgreSQL, MySQL and SQLite
 Exec=dbird

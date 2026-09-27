@@ -47,7 +47,7 @@
       </label>
     {:else}
       <p class="warn">
-        No password store is available, so dbird can't save this password and will ask again next time. Set up a password store
+        No password store is available, so DBird can't save this password and will ask again next time. Set up a password store
         (GNOME Keyring, KWallet or KeePassXC) to have it remembered securely.
       </p>
     {/if}

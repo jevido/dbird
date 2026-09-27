@@ -1,12 +1,12 @@
 #!/bin/sh
-# dbird installer for Linux and macOS.
+# DBird installer for Linux and macOS.
 #
 #   curl -fsSL https://raw.githubusercontent.com/jevido/dbird/main/install.sh | sh
 #
-# Installs the latest release into your home directory (no sudo), where dbird
+# Installs the latest release into your home directory (no sudo), where DBird
 # can update itself, and adds it to your app launcher.
 #   Linux: ~/.local/share/dbird/dbird, linked as ~/.local/bin/dbird
-#   macOS: ~/Applications/dbird.app
+#   macOS: ~/Applications/DBird.app
 #
 # Uninstall: curl -fsSL https://raw.githubusercontent.com/jevido/dbird/main/install.sh | sh -s -- --uninstall
 set -eu
@@ -30,13 +30,13 @@ bin=$HOME/.local/bin
 
 uninstall() {
   case $(uname -s) in
-    Darwin) rm -rf "$HOME/Applications/dbird.app" ;;
+    Darwin) rm -rf "$HOME/Applications/DBird.app" "$HOME/Applications/dbird.app" ;;
     *)
       rm -rf "$data/dbird" "$bin/dbird" "$data/applications/dbird.desktop" "$data/icons/hicolor/512x512/apps/dbird.png"
       command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$data/applications" >/dev/null 2>&1 || true
       ;;
   esac
-  say "dbird removed. Your connections and tabs are kept in ~/.config/dbird (delete it to remove them too)."
+  say "DBird removed. Your connections and tabs are kept in ~/.config/dbird (delete it to remove them too)."
 }
 
 [ "${1:-}" = "--uninstall" ] && { uninstall; exit 0; }
@@ -52,7 +52,7 @@ case $(uname -s) in
       *) fail "unsupported architecture $(uname -m)" ;;
     esac
     need tar
-    say "Downloading dbird for Linux ($arch)…"
+    say "Downloading DBird for Linux ($arch)…"
     fetch "$BASE/dbird-linux-$arch.tar.gz" "$tmp/dbird.tar.gz"
     tar -xzf "$tmp/dbird.tar.gz" -C "$tmp"
     mkdir -p "$data/dbird" "$bin" "$data/applications" "$data/icons/hicolor/512x512/apps"
@@ -63,28 +63,29 @@ case $(uname -s) in
     sed "s|^Exec=.*|Exec=$data/dbird/dbird|" "$tmp/dbird.desktop" > "$data/applications/dbird.desktop"
     command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$data/applications" >/dev/null 2>&1 || true
 
-    # dbird needs GTK 4 and WebKitGTK 6.0.
+    # DBird needs GTK 4 and WebKitGTK 6.0.
     if ! (ldconfig -p 2>/dev/null | grep -q 'libwebkitgtk-6.0.so'); then
-      say "dbird needs WebKitGTK 6.0, which doesn't seem to be installed:"
+      say "DBird needs WebKitGTK 6.0, which doesn't seem to be installed:"
       if command -v pacman >/dev/null 2>&1; then echo "  sudo pacman -S --needed gtk4 webkitgtk-6.0"
       elif command -v apt-get >/dev/null 2>&1; then echo "  sudo apt install libgtk-4-1 libwebkitgtk-6.0-4"
       elif command -v dnf >/dev/null 2>&1; then echo "  sudo dnf install gtk4 webkitgtk6.0"
       else echo "  install gtk4 and webkitgtk-6.0 with your package manager"; fi
     fi
 
-    say "dbird is installed. Start it from your app launcher, or run: dbird"
+    say "DBird is installed. Start it from your app launcher, or run: dbird"
     case ":$PATH:" in *":$bin:"*) ;; *) echo "(add $bin to your PATH to run it from a terminal)" ;; esac
     ;;
   Darwin)
     need unzip
-    say "Downloading dbird for macOS…"
+    say "Downloading DBird for macOS…"
     fetch "$BASE/dbird-darwin-universal.zip" "$tmp/dbird.zip"
     unzip -q "$tmp/dbird.zip" -d "$tmp"
     mkdir -p "$HOME/Applications"
-    rm -rf "$HOME/Applications/dbird.app"
-    mv "$tmp/dbird.app" "$HOME/Applications/dbird.app"
-    xattr -dr com.apple.quarantine "$HOME/Applications/dbird.app" 2>/dev/null || true
-    say "dbird is installed in ~/Applications. Open it from Launchpad or Spotlight."
+    # Releases before 0.5 named the bundle dbird.app.
+    rm -rf "$HOME/Applications/DBird.app" "$HOME/Applications/dbird.app"
+    mv "$tmp/DBird.app" "$HOME/Applications/DBird.app"
+    xattr -dr com.apple.quarantine "$HOME/Applications/DBird.app" 2>/dev/null || true
+    say "DBird is installed in ~/Applications. Open it from Launchpad or Spotlight."
     ;;
   *)
     fail "this installer supports Linux and macOS; on Windows use install.ps1 (see the README)"

@@ -105,7 +105,7 @@
 
 {#if initError}
   <div class="fatal">
-    <h2>dbird failed to start</h2>
+    <h2>DBird failed to start</h2>
     <pre>{initError}</pre>
   </div>
 {:else if ready}

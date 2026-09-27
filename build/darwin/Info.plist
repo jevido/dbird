@@ -13,7 +13,7 @@
 		<key>CFBundleIdentifier</key>
 		<string>nl.dbird.app</string>
 		<key>CFBundleName</key>
-		<string>dbird</string>
+		<string>DBird</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
