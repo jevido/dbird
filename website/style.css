@@ -306,3 +306,8 @@ footer p:last-child a:first-child { margin-left: 0; }
   .caret { animation: none; }
   .btn { transition: none; }
 }
+
+/* Why */
+.why { max-width: 760px !important; padding-bottom: 24px !important; }
+.why p { color: var(--text-muted); font-size: 1.1rem; margin: 16px 0 0; }
+.why h2 { margin-bottom: 4px; }

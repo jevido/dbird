@@ -101,6 +101,12 @@
       </div>
     </section>
 
+    <section id="why" class="why">
+      <h2>Why DBird</h2>
+      <p><a href="https://dbeaver.io">DBeaver</a> is, as far as I'm concerned, the best database client there is, and I used it happily for years. But looking at how I actually used it, it came down to two things: keeping a long list of connections, and running queries against them. All the rest of what DBeaver can do, I never touched.</p>
+      <p>So I built DBird: the part of DBeaver I used every day, and nothing else. If you need more than connections and queries, DBeaver is still the one to get. If you already use it, DBird can import your saved connections.</p>
+    </section>
+
     <section id="features" class="features">
       <h2>What it does</h2>
       <p class="section-lede">No plugins, no workspace, no project wizard. Connect, write a query, look at the rows.</p>
@@ -111,7 +117,7 @@
         <div><dt><span class="ico">⌨</span>The VS Code editor</dt><dd>Monaco with SQL highlighting per dialect and autocompletion that knows your aliases, tables and columns. Multi-cursor, command palette, the lot.</dd></div>
         <div><dt><span class="ico">⇥</span>One session per tab</dt><dd>Every tab has its own database session, so <code>SET</code>, <code>USE</code>, <code>BEGIN</code>/<code>COMMIT</code> and temp tables behave like they do in a terminal client.</dd></div>
         <div><dt><span class="ico">✎</span>Edit rows in the grid</dt><dd>Results from a single table are editable. Type in a cell, paste from a spreadsheet, fill down, add and delete rows, undo. Enums get a dropdown, foreign keys suggest values. Saved in one transaction, and rows someone else changed are refused, not overwritten.</dd></div>
-        <div><dt><span class="ico">⇄</span>Bring your connections</dt><dd>Import the saved PostgreSQL, MySQL and SQLite connections from the database client you use now, passwords included.</dd></div>
+        <div><dt><span class="ico">⇄</span>Import from DBeaver</dt><dd>Bring your saved PostgreSQL, MySQL and SQLite connections over in one go, passwords included.</dd></div>
         <div><dt><span class="ico">⚿</span>Passwords in your keychain</dt><dd>Passwords never touch the config file. They go in the OS password store: GNOME Keyring, KWallet or KeePassXC, the macOS Keychain, or Windows Credential Manager.</dd></div>
         <div><dt><span class="ico">▤</span>A grid that stays fast</dt><dd>Virtualized, so 50,000 rows scroll smoothly. Sort, resize, move with the keyboard, open a value with JSON formatting, copy as TSV or export CSV.</dd></div>
         <div><dt><span class="ico">⚠</span>A seatbelt for DELETE</dt><dd>A <code>DELETE</code> without a <code>WHERE</code> clause asks first. Long queries show the elapsed time and can be cancelled.</dd></div>
