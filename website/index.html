@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dbird — a lightweight SQL client</title>
+  <meta name="description" content="dbird is a small, fast SQL client for PostgreSQL, MySQL/MariaDB and SQLite. Saved connections, tabbed SQL editors and a result grid that stays quick with 50,000 rows. For Linux, macOS and Windows.">
+  <meta name="theme-color" content="#16171b">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta property="og:title" content="dbird — a lightweight SQL client">
+  <meta property="og:description" content="Saved connections, tabbed SQL editors and a fast result grid. PostgreSQL, MySQL/MariaDB and SQLite. Free and open source.">
+  <meta property="og:image" content="https://dbird.jevido.app/assets/logo-512.png">
+  <meta property="og:url" content="https://dbird.jevido.app/">
+  <meta name="twitter:card" content="summary">
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="30" height="30"><span>dbird</span></a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#shortcuts">Shortcuts</a>
+        <a href="#download">Download</a>
+        <a href="https://github.com/jevido/dbird" class="gh" aria-label="dbird on GitHub">
+          <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow" data-version>Free and open source</p>
+        <h1>A SQL client that <span class="accent">gets out of the way</span></h1>
+        <p class="lede">dbird does the two things you open DBeaver for: a long list of saved connections, and tabbed SQL editors with a result grid. It starts in a blink and stays small.</p>
+        <div class="cta">
+          <a class="btn primary" data-dl href="#download">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>
+            <span><strong data-label>Download dbird</strong><small data-sub>Linux, macOS &amp; Windows</small></span>
+          </a>
+          <a class="btn ghost" href="#download">All downloads</a>
+        </div>
+        <ul class="engines" aria-label="Supported databases">
+          <li>PostgreSQL</li><li>MySQL</li><li>MariaDB</li><li>SQLite</li>
+        </ul>
+      </div>
+
+      <!-- The app as it looks today, drawn in HTML so it stays sharp. -->
+      <div class="hero-art" aria-hidden="true">
+        <div class="window">
+          <aside class="side">
+            <div class="filter">⌕ <span>Filter</span></div>
+            <div class="conn"><i class="dot" style="--c:#5cc38a"></i>shop-prod <small>postgres</small></div>
+            <div class="tree">
+              <p class="t1">▾ public</p>
+              <p class="t2">▾ Tables</p>
+              <p class="t3 on">▦ customers</p>
+              <p class="t4"><b>🔑</b> id <small>int8</small></p>
+              <p class="t4">email <small>text</small></p>
+              <p class="t4">country <small>text</small></p>
+              <p class="t3">▦ orders</p>
+              <p class="t3">▦ products</p>
+              <p class="t2">▸ Views</p>
+            </div>
+            <div class="conn"><i class="dot" style="--c:#f0a869"></i>shop-staging <small>mysql</small></div>
+            <div class="conn"><i class="dot" style="--c:#5b8def"></i>local.db <small>sqlite</small></div>
+          </aside>
+          <div class="work">
+            <div class="tabs">
+              <span class="tab on"><i class="dot" style="--c:#5cc38a"></i>top customers<em>•</em></span>
+              <span class="tab">orders.sql</span>
+              <span class="tab">customers</span>
+              <span class="plus">+</span>
+            </div>
+            <pre class="editor"><span class="ln">1</span><span class="k">select</span> c.email, <span class="f">count</span>(*) <span class="k">as</span> orders,
+<span class="ln">2</span>       <span class="f">sum</span>(o.total) <span class="k">as</span> spent
+<span class="ln">3</span><span class="k">from</span> customers c
+<span class="ln">4</span><span class="k">join</span> orders o <span class="k">on</span> o.customer_id = c.<span class="caret">id</span>
+<span class="ln">5</span><span class="k">where</span> o.created_at &gt; <span class="s">'2026-01-01'</span>
+<span class="ln">6</span><span class="k">group by</span> c.email <span class="k">order by</span> spent <span class="k">desc</span>;<div class="ac"><p class="on"><b>id</b><small>int8 · customers</small></p><p><b>created_at</b><small>timestamptz</small></p><p><b>country</b><small>text</small></p></div></pre>
+            <div class="results">
+              <div class="rbar"><span class="on">Result 1</span><small>1,204 rows · 38 ms</small><small class="exp">Export CSV</small></div>
+              <table>
+                <thead><tr><th>#</th><th>email</th><th>orders</th><th>spent ▾</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>ada@example.com</td><td class="n">42</td><td class="n">8,310.40</td></tr>
+                  <tr class="sel"><td>2</td><td>linus@example.com</td><td class="n">37</td><td class="n">7,955.00</td></tr>
+                  <tr><td>3</td><td>grace@example.com</td><td class="n">35</td><td class="n">7,102.15</td></tr>
+                  <tr><td>4</td><td>ken@example.com</td><td class="n">29</td><td class="n">6,480.90</td></tr>
+                  <tr><td>5</td><td>barbara@example.com</td><td class="n">24</td><td class="n null">NULL</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <h2>What it does</h2>
+      <p class="section-lede">No plugins, no workspace, no project wizard. Connect, write a query, look at the rows.</p>
+
+      <dl class="features-list">
+        <div><dt><span class="ico">⚇</span>Many connections</dt><dd>PostgreSQL, MySQL/MariaDB and SQLite. Fill in host and port or paste a connection URL, test it, give it a color, duplicate it for staging.</dd></div>
+        <div><dt><span class="ico">▦</span>A tree that loads lazily</dt><dd>Schemas, tables, views and columns with their types and primary keys. Double-click a table to see its data. Huge schemas open instantly because the list is paged.</dd></div>
+        <div><dt><span class="ico">⌨</span>The VS Code editor</dt><dd>Monaco with SQL highlighting per dialect and autocompletion that knows your aliases, tables and columns. Multi-cursor, command palette, the lot.</dd></div>
+        <div><dt><span class="ico">⇥</span>One session per tab</dt><dd>Every tab has its own database session, so <code>SET</code>, <code>USE</code>, <code>BEGIN</code>/<code>COMMIT</code> and temp tables behave like they do in a terminal client.</dd></div>
+        <div><dt><span class="ico">▤</span>A grid that stays fast</dt><dd>Virtualized, so 50,000 rows scroll smoothly. Sort, resize, move with the keyboard, open a value with JSON formatting, copy as TSV or export CSV.</dd></div>
+        <div><dt><span class="ico">⚠</span>A seatbelt for DELETE</dt><dd>A <code>DELETE</code> without a <code>WHERE</code> clause asks first. Long queries show the elapsed time and can be cancelled.</dd></div>
+        <div><dt><span class="ico">¶</span>Scripts that split right</dt><dd>Statements split on <code>;</code> and blank lines, respecting quotes, comments, <code>$$</code> bodies, <code>BEGIN … END</code> routines and MySQL's <code>DELIMITER</code>. One result tab per statement.</dd></div>
+        <div><dt><span class="ico">⎘</span>Plain .sql files</dt><dd>Open and save scripts. Edit one in another editor and dbird picks up the change, and asks first if you have unsaved edits.</dd></div>
+        <div><dt><span class="ico">↺</span>Picks up where you left off</dt><dd>Tabs are restored on restart. Rename them, drag them around, reopen one you closed by accident.</dd></div>
+        <div><dt><span class="ico">⇪</span>Updates itself</dt><dd>New versions download in the background and are checked against the release checksums. Restart when it suits you, and see what's new.</dd></div>
+      </dl>
+    </section>
+
+    <section id="shortcuts" class="shortcuts">
+      <h2>Keyboard first</h2>
+      <p class="section-lede">The shortcuts you'd guess, so your hands can stay where they are.</p>
+      <div class="keys-grid">
+        <p><span><kbd>Ctrl</kbd><kbd>Enter</kbd></span>Run the statement under the cursor</p>
+        <p><span><kbd>Alt</kbd><kbd>X</kbd></span>Run the whole script</p>
+        <p><span><kbd>Ctrl</kbd><kbd>T</kbd></span>New tab</p>
+        <p><span><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>T</kbd></span>Reopen closed tab</p>
+        <p><span><kbd>Ctrl</kbd><kbd>1</kbd>…<kbd>9</kbd></span>Jump to a tab</p>
+        <p><span><kbd>Ctrl</kbd><kbd>S</kbd></span>Save as .sql</p>
+        <p><span><kbd>Ctrl</kbd><kbd>/</kbd></span>Toggle comment</p>
+        <p><span><kbd>F1</kbd></span>Editor command palette</p>
+      </div>
+    </section>
+
+    <section id="download" class="download">
+      <h2>Get dbird</h2>
+      <p class="section-lede" data-release-note>Every download comes from <a href="https://github.com/jevido/dbird/releases/latest">GitHub Releases</a> and is listed in its <code>checksums.txt</code>.</p>
+
+      <div class="platforms">
+        <article class="platform" data-platform="linux" id="linux">
+          <header>
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="logo"><path fill="currentColor" d="M12.5 2c-2.2 0-3.4 1.9-3.4 4.3 0 1.3.2 2.1-.6 3.4-.9 1.4-2.6 3.3-2.9 5.7-.2 1.4.3 2.3.6 2.7-.6.4-1.6.6-1.9 1.3-.3.8.5 1.5 1.9 1.8 1.5.3 2.8.9 3.8.9.9 0 1.5-.5 1.8-1 .8.1 1.9.1 2.9 0 .3.6.9 1.1 1.9 1.1 1.2 0 2.3-.7 3.6-1.3 1.2-.5 1.8-1 1.7-1.7-.1-.6-1-.8-1.5-1.3.4-.6.7-1.6.4-3-.4-2-2-4-2.9-5.2-.9-1.1-.9-2.2-.9-3.8C17 3.6 15.3 2 12.5 2z"/></svg>
+            <div><h3>Linux</h3><small>x86_64 &amp; arm64 · GTK 4 + WebKitGTK 6.0</small></div>
+          </header>
+          <p class="label">Quick install <span class="tag">updates itself</span></p>
+          <div class="code">
+            <code id="install-linux">curl -fsSL https://dbird.jevido.app/install.sh | sh</code>
+            <button class="copy" data-copy="#install-linux" aria-label="Copy install command">Copy</button>
+          </div>
+          <p class="hint">Installs into your home directory without sudo and adds dbird to your app launcher. Tells you what to install if GTK 4 or WebKitGTK is missing.</p>
+          <p class="label">Or grab a package</p>
+          <ul class="pkgs" data-arch-list>
+            <li><a data-arch-href="dbird-linux-{deb}.tar.gz" href="https://github.com/jevido/dbird/releases/latest/download/dbird-linux-amd64.tar.gz"><b>Portable</b><span>.tar.gz</span></a></li>
+            <li><a data-arch-href="dbird-linux-{rpm}.pkg.tar.zst" href="https://github.com/jevido/dbird/releases/latest/download/dbird-linux-x86_64.pkg.tar.zst"><b>Arch / Omarchy</b><span>.pkg.tar.zst</span></a></li>
+            <li><a data-arch-href="dbird-linux-{deb}.deb" href="https://github.com/jevido/dbird/releases/latest/download/dbird-linux-amd64.deb"><b>Debian / Ubuntu</b><span>.deb</span></a></li>
+            <li><a data-arch-href="dbird-linux-{rpm}.rpm" href="https://github.com/jevido/dbird/releases/latest/download/dbird-linux-x86_64.rpm"><b>Fedora / RHEL</b><span>.rpm</span></a></li>
+            <li><a data-arch-href="dbird-linux-{rpm}.AppImage" href="https://github.com/jevido/dbird/releases/latest/download/dbird-linux-x86_64.AppImage"><b>AppImage</b><span>any distro</span></a></li>
+          </ul>
+          <div class="arch" role="group" aria-label="Processor">
+            <button class="on" data-arch="amd64">x86_64</button><button data-arch="arm64">arm64</button>
+          </div>
+          <details>
+            <summary>Missing GTK 4 / WebKitGTK?</summary>
+            <dl>
+              <dt>Debian / Ubuntu 24.04+</dt><dd><code>sudo apt install libgtk-4-1 libwebkitgtk-6.0-4</code></dd>
+              <dt>Arch</dt><dd><code>sudo pacman -S gtk4 webkitgtk-6.0</code></dd>
+              <dt>Fedora</dt><dd><code>sudo dnf install gtk4 webkitgtk6.0</code></dd>
+            </dl>
+          </details>
+          <p class="hint">Packages installed with apt, dnf or pacman are updated by your package manager; dbird tells you when there's a new one.</p>
+        </article>
+
+        <article class="platform" data-platform="mac" id="mac">
+          <header>
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="logo"><path fill="currentColor" d="M12.15 6.9c-.95 0-2.42-1.08-3.96-1.04-2.04.03-3.91 1.18-4.96 3.01-2.12 3.68-.55 9.1 1.52 12.09 1.01 1.45 2.2 3.09 3.79 3.04 1.52-.07 2.09-.99 3.93-.99 1.83 0 2.35.99 3.96.95 1.64-.03 2.68-1.48 3.68-2.95 1.16-1.69 1.64-3.33 1.66-3.42-.04-.01-3.18-1.22-3.22-4.86-.03-3.04 2.48-4.49 2.6-4.56-1.43-2.09-3.62-2.32-4.39-2.38-2-.16-3.68 1.09-4.61 1.09zm3.38-3.07c.84-1.01 1.4-2.43 1.25-3.83-1.21.05-2.66.8-3.53 1.82-.78.9-1.46 2.34-1.27 3.71 1.34.1 2.71-.69 3.55-1.7z"/></svg>
+            <div><h3>macOS</h3><small>Apple Silicon &amp; Intel · universal</small></div>
+          </header>
+          <p class="label">Quick install <span class="tag">updates itself</span></p>
+          <div class="code">
+            <code id="install-mac">curl -fsSL https://dbird.jevido.app/install.sh | sh</code>
+            <button class="copy" data-copy="#install-mac" aria-label="Copy install command">Copy</button>
+          </div>
+          <p class="hint">Installs <code>~/Applications/dbird.app</code>.</p>
+          <p class="label">Or download it</p>
+          <a class="btn primary wide" href="https://github.com/jevido/dbird/releases/latest/download/dbird-darwin-universal.zip">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>
+            <span><strong>Download for Mac</strong><small>dbird-darwin-universal.zip</small></span>
+          </a>
+          <details>
+            <summary>“dbird can't be opened”?</summary>
+            <p class="hint">The app isn't notarized yet. Right-click it and choose <b>Open</b>, or run this once:</p>
+            <p><code>xattr -dr com.apple.quarantine /Applications/dbird.app</code></p>
+          </details>
+        </article>
+
+        <article class="platform" data-platform="windows" id="windows">
+          <header>
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="logo"><path fill="currentColor" d="M3 5.1 10.4 4v7.1H3V5.1zm8.4-1.2L21 2.5v8.6h-9.6V3.9zM3 12.1h7.4v7.1L3 18.1v-6zm8.4 0H21v8.6l-9.6-1.4v-7.2z"/></svg>
+            <div><h3>Windows</h3><small>Windows 10 &amp; 11 · 64-bit</small></div>
+          </header>
+          <p class="label">Quick install <span class="tag">updates itself</span></p>
+          <div class="code">
+            <code id="install-win">irm https://dbird.jevido.app/install.ps1 | iex</code>
+            <button class="copy" data-copy="#install-win" aria-label="Copy install command">Copy</button>
+          </div>
+          <p class="hint">Run it in PowerShell. Installs for your user only, no admin rights, and adds dbird to the Start menu.</p>
+          <p class="label">Or download it</p>
+          <a class="btn primary wide" href="https://github.com/jevido/dbird/releases/latest/download/dbird-windows-amd64.zip">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>
+            <span><strong>Download for Windows</strong><small>dbird-windows-amd64.zip</small></span>
+          </a>
+          <details>
+            <summary>“Windows protected your PC”?</summary>
+            <p class="hint">dbird isn't code-signed yet, so SmartScreen doesn't know it. Click <b>More info</b>, then <b>Run anyway</b>. You only need to do this once.</p>
+          </details>
+        </article>
+      </div>
+    </section>
+
+    <section class="closing">
+      <img src="assets/logo.svg" alt="" width="80" height="80">
+      <h2>Your connections stay yours</h2>
+      <p>dbird has no account, no cloud sync and no telemetry. Connections and tabs live in a JSON file in your config folder. The only thing it asks the internet is whether there's a new version, and you can turn that off with <code>DBIRD_NO_UPDATE=1</code>.</p>
+      <a class="btn primary" href="#download">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>
+        <span><strong>Download dbird</strong></span>
+      </a>
+    </section>
+  </main>
+
+  <footer>
+    <p><img src="assets/logo.svg" alt="" width="20" height="20"> dbird <span data-version-footer></span> · MIT licensed</p>
+    <p>
+      <a href="https://github.com/jevido/dbird">Source</a>
+      <a href="https://github.com/jevido/dbird/releases">Releases</a>
+      <a href="https://github.com/jevido/dbird/issues">Report a bug</a>
+    </p>
+  </footer>
+</body>
+</html>
