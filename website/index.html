@@ -6,7 +6,7 @@
   <title>dbird — a lightweight SQL client</title>
   <meta name="description" content="dbird is a small, fast SQL client for PostgreSQL, MySQL/MariaDB and SQLite. Saved connections, tabbed SQL editors and a result grid that stays quick with 50,000 rows. For Linux, macOS and Windows.">
   <meta name="theme-color" content="#16171b">
-  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="icon" type="image/png" href="assets/logo.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta property="og:title" content="dbird — a lightweight SQL client">
   <meta property="og:description" content="Saved connections, tabbed SQL editors and a fast result grid. PostgreSQL, MySQL/MariaDB and SQLite. Free and open source.">
@@ -19,7 +19,7 @@
 <body>
   <header class="nav">
     <div class="nav-inner">
-      <a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="30" height="30"><span>dbird</span></a>
+      <a class="brand" href="#top"><img src="assets/logo.png" alt="" width="30" height="30"><span>dbird</span></a>
       <nav>
         <a href="#features">Features</a>
         <a href="#shortcuts">Shortcuts</a>
@@ -107,14 +107,16 @@
 
       <dl class="features-list">
         <div><dt><span class="ico">⚇</span>Many connections</dt><dd>PostgreSQL, MySQL/MariaDB and SQLite. Fill in host and port or paste a connection URL, test it, give it a color, duplicate it for staging.</dd></div>
-        <div><dt><span class="ico">▦</span>A tree that loads lazily</dt><dd>Schemas, tables, views and columns with their types and primary keys. Double-click a table to see its data. Huge schemas open instantly because the list is paged.</dd></div>
+        <div><dt><span class="ico">▦</span>A tree that loads lazily</dt><dd>Schemas, tables, views and columns with their types and primary keys. Double-click a table to open its data. Huge schemas open instantly because the list is paged.</dd></div>
         <div><dt><span class="ico">⌨</span>The VS Code editor</dt><dd>Monaco with SQL highlighting per dialect and autocompletion that knows your aliases, tables and columns. Multi-cursor, command palette, the lot.</dd></div>
         <div><dt><span class="ico">⇥</span>One session per tab</dt><dd>Every tab has its own database session, so <code>SET</code>, <code>USE</code>, <code>BEGIN</code>/<code>COMMIT</code> and temp tables behave like they do in a terminal client.</dd></div>
+        <div><dt><span class="ico">✎</span>Edit rows in the grid</dt><dd>Results from a single table are editable. Type in a cell, paste from a spreadsheet, fill down, add and delete rows, undo. Enums get a dropdown, foreign keys suggest values. Saved in one transaction, and rows someone else changed are refused, not overwritten.</dd></div>
+        <div><dt><span class="ico">⇄</span>Import from DBeaver</dt><dd>Bring your saved PostgreSQL, MySQL and SQLite connections over in one go, passwords included.</dd></div>
+        <div><dt><span class="ico">⚿</span>Passwords in your keychain</dt><dd>Passwords never touch the config file. They go in the OS password store: GNOME Keyring, KWallet or KeePassXC, the macOS Keychain, or Windows Credential Manager.</dd></div>
         <div><dt><span class="ico">▤</span>A grid that stays fast</dt><dd>Virtualized, so 50,000 rows scroll smoothly. Sort, resize, move with the keyboard, open a value with JSON formatting, copy as TSV or export CSV.</dd></div>
         <div><dt><span class="ico">⚠</span>A seatbelt for DELETE</dt><dd>A <code>DELETE</code> without a <code>WHERE</code> clause asks first. Long queries show the elapsed time and can be cancelled.</dd></div>
         <div><dt><span class="ico">¶</span>Scripts that split right</dt><dd>Statements split on <code>;</code> and blank lines, respecting quotes, comments, <code>$$</code> bodies, <code>BEGIN … END</code> routines and MySQL's <code>DELIMITER</code>. One result tab per statement.</dd></div>
-        <div><dt><span class="ico">⎘</span>Plain .sql files</dt><dd>Open and save scripts. Edit one in another editor and dbird picks up the change, and asks first if you have unsaved edits.</dd></div>
-        <div><dt><span class="ico">↺</span>Picks up where you left off</dt><dd>Tabs are restored on restart. Rename them, drag them around, reopen one you closed by accident.</dd></div>
+        <div><dt><span class="ico">⎘</span>Plain .sql files</dt><dd>Open and save scripts. Edit one in another editor and dbird picks up the change, and asks first if you have unsaved edits. Open tabs come back after a restart.</dd></div>
         <div><dt><span class="ico">⇪</span>Updates itself</dt><dd>New versions download in the background and are checked against the release checksums. Restart when it suits you, and see what's new.</dd></div>
       </dl>
     </section>
@@ -220,9 +222,9 @@
     </section>
 
     <section class="closing">
-      <img src="assets/logo.svg" alt="" width="80" height="80">
+      <img src="assets/logo.png" alt="" width="80" height="80">
       <h2>Your connections stay yours</h2>
-      <p>dbird has no account, no cloud sync and no telemetry. Connections and tabs live in a JSON file in your config folder. The only thing it asks the internet is whether there's a new version, and you can turn that off with <code>DBIRD_NO_UPDATE=1</code>.</p>
+      <p>dbird has no account, no cloud sync and no telemetry. Connections and tabs live in a JSON file in your config folder, and passwords in your OS password store. The only thing it asks the internet is whether there's a new version, and you can turn that off with <code>DBIRD_NO_UPDATE=1</code>.</p>
       <a class="btn primary" href="#download">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>
         <span><strong>Download dbird</strong></span>
@@ -231,7 +233,7 @@
   </main>
 
   <footer>
-    <p><img src="assets/logo.svg" alt="" width="20" height="20"> dbird <span data-version-footer></span> · MIT licensed</p>
+    <p><img src="assets/logo.png" alt="" width="20" height="20"> dbird <span data-version-footer></span> · MIT licensed</p>
     <p>
       <a href="https://github.com/jevido/dbird">Source</a>
       <a href="https://github.com/jevido/dbird/releases">Releases</a>
